@@ -1,3 +1,6 @@
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-legendaryredfox-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/legendaryredfox)
+
 ### desAnim8 v0.3.0 — An animation library for LÖVE 11.5
 
 This project was based on [kikito's anim8](https://github.com/kikito/anim8). If you like it, please consider supporting his work.
@@ -210,9 +213,3 @@ function love.draw()
     anim:draw(player.x, player.y)
 end
 ```
-
-## ☕ Support
-
-If you find this project useful, consider supporting its development:
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-legendaryredfox-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/legendaryredfox)
