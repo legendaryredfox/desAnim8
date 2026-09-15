@@ -262,6 +262,27 @@ function love.draw() anim:draw(x, y) end
 
 ---
 
+### Related libraries & the Aseprite workflow
+
+desAnim8 is grid/quad-based like [anim8](https://github.com/kikito/anim8). If your
+art lives in **Aseprite**, these libraries import its exports directly and are
+worth a look (a native Aseprite import is planned — see `FIX_PLAN.md` D3.4):
+
+| Library | Niche |
+|---|---|
+| [anim8](https://github.com/kikito/anim8) | The original grid/quad animator desAnim8 is based on. |
+| [peachy](https://github.com/josh-perry/peachy) | Renders Aseprite **JSON + PNG** exports; uses **frame tags**. |
+| [nim.lua](https://github.com/tarhses/nim.lua) | Aseprite sheets with forward/reverse/**ping-pong** and caching. |
+| [OSLib Sprites Lib](https://github.com/PSP-Archive/oslibmodv2) | C sprite animation on PSP (framerate, flip, start/end frame) — the same shape in native code. |
+
+**Aseprite export tips** (also apply to the planned importer): export the sheet as
+an **Array** (not a hash), enable **Frame Tags** (define at least one, even for a
+single animation), and pass the image to your loader yourself — Aseprite writes a
+non-relative image path into the JSON that LÖVE won't load. Aseprite **slices**
+are regions, not frames, so they don't animate.
+
+---
+
 ### Using on consoles (PSP / Vita / PS3)
 
 desAnim8 was written with [LOVE-WrapLua](https://github.com/legendaryredfox/LOVE-WrapLua)

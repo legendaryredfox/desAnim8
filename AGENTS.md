@@ -192,3 +192,21 @@ sb:set(id, anim:getFrameInfo(x, y))
 - **No comments explaining what code does.** Only add a comment when the *why* is non-obvious.
 - **Internal fields are prefixed `_`** (`_seq`, `_intervals`, `_timer`, `_position`, `_durations`, `_totalDuration`). Do not expose or document them as public API.
 - **`frames`, `_durations`, `_seq`, `_intervals` are immutable after construction.** `clone()` shares them by reference; never mutate them.
+
+### Commit and writing rules
+
+- **Commit authorship is fixed.** Every commit and push must be authored solely by
+  `Legendary Redfox <legendaryredfox.dev@gmail.com>`. Set it explicitly:
+  `git commit --author="Legendary Redfox <legendaryredfox.dev@gmail.com>"`.
+- **No AI trailer (no-ai-trailing).** Never add `Co-Authored-By: Claude`, "Generated
+  with", or any AI attribution line to commit messages, PR bodies, or code.
+- **No em-dashes.** Do not use the em-dash character in prose, docs, code comments,
+  or commit messages. Use a comma, parentheses, a colon, or reword.
+- **Branch first; never commit on the default branch directly.** Use Conventional
+  Commits subjects (`fix: …`, `feat: …`, `test: …`).
+- **Test-first for behaviour changes.** When the test suite exists (FIX_PLAN D0.1),
+  add a failing test before the fix and run the full suite before committing.
+- **A native Aseprite import and caching are planned** (FIX_PLAN D3.4 / D2.5),
+  grounded in `josh-perry/peachy` and `tarhses/nim.lua`. Keep any importer
+  dependency-free (accept a predecoded table or a decoder callback) so the library
+  still runs on console targets.
