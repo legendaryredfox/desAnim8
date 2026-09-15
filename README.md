@@ -213,3 +213,81 @@ function love.draw()
     anim:draw(player.x, player.y)
 end
 ```
+
+---
+
+### Installing
+
+desAnim8 is a single file with no dependencies beyond LÖVE itself.
+
+1. Copy `desAnim8.lua` into your project (e.g. `libraries/desAnim8.lua`).
+2. `require` it:
+
+```lua
+local desAnim8 = require 'libraries.desAnim8'   -- adjust the path to where you put it
+```
+
+Requires LÖVE 11.5 (LuaJIT / Lua 5.1–5.4). It only uses `love.graphics.newQuad`
+and `love.graphics.draw`, so it also runs on LÖVE-compatible layers — see below.
+
+---
+
+### Migrating from anim8
+
+desAnim8 is based on [kikito's anim8](https://github.com/kikito/anim8) and keeps a
+similar shape, with a few differences.
+
+| anim8 | desAnim8 | Notes |
+|---|---|---|
+| `anim8.newGrid(fw, fh, iw, ih, l, t, b)` | `desAnim8.newGrid(fw, fh, iw, ih, left, top, border)` | Same signature. |
+| `grid('1-6', 1)` | `g('1-6', 1)` | Same range strings; reverse ranges (`'6-1'`) supported. |
+| `anim8.newAnimation(frames, durations [, onLoop])` | `desAnim8.new(image, frames, durations [, playMode])` | **desAnim8 takes the image up front**, and the 4th argument is a **play mode**, not an onLoop. |
+| `durations`: number / list / `{['1-3']=0.1}` | same | Identical duration forms. |
+| looping via `onLoop` returning `'pauseAtEnd'` | dedicated play modes `'loop' \| 'once' \| 'bounce' \| 'bounceOnce'` | Prefer play modes; `onLoop` still exists for callbacks. |
+| `anim:draw(image, x, y, ...)` | `anim:draw(x, y, ...)` | Image is stored in the animation; don't pass it to `draw`. |
+| `anim:flipH()` mutates in place | `anim:flipH()` toggles a flag (chainable) | Flip is applied at draw time via negative scale — it never mutates the spritesheet. |
+| `anim.position` | `anim.currentFrame` | 1-based current frame index. |
+
+Quick port:
+
+```lua
+-- anim8
+local anim = anim8.newAnimation(grid('1-6', 1), 0.1)
+function love.draw() anim:draw(image, x, y) end
+
+-- desAnim8
+local anim = desAnim8.new(image, g('1-6', 1), 0.1)
+function love.draw() anim:draw(x, y) end
+```
+
+---
+
+### Using on consoles (PSP / Vita / PS3)
+
+desAnim8 was written with [LOVE-WrapLua](https://github.com/legendaryredfox/LOVE-WrapLua)
+in mind, so the same animation code runs on homebrew hardware. Keep the console
+GPU limits in mind when building spritesheets:
+
+- **PSP:** textures must be **power-of-two** and **≤ 512×512**. Split larger
+  sheets into multiple images.
+- On the wrapper's **lpp-vita** backend, spritesheet/quad drawing is still being
+  finished — use the **OneLua** backend on Vita for animation-heavy games for now.
+
+---
+
+### Spritesheet tips
+
+- **Avoid edge bleed.** With linear filtering, neighbouring frames can bleed a
+  pixel into each other. Either leave a 1px gutter between frames and pass it as
+  the grid `border`, or draw with nearest-neighbour filtering for pixel art:
+
+  ```lua
+  love.graphics.setDefaultFilter('nearest', 'nearest')   -- before newImage
+  local g = desAnim8.newGrid(48, 48, iw, ih, 0, 0, 1)    -- 1px border between frames
+  ```
+
+- **`getFrameInfo` for SpriteBatch / shaders.** When you need the raw quad plus
+  transform (with flip already applied), use `getFrameInfo` instead of `draw`.
+
+- **Clone per entity.** Give each on-screen entity its own `anim:clone()` so their
+  playback (timer, current frame, flip) stays independent.
