@@ -1,5 +1,5 @@
 local desAnim8 = {
-    _VERSION     = 'desAnim8 v0.3.0',
+    _VERSION     = 'desAnim8 v0.4.0',
     _DESCRIPTION = 'An animation library for LÖVE 11.5 games',
     _URL         = 'https://github.com/legendaryredfox/desAnim8',
     _THANKS      = 'All thanks, recognition and incentives should go to https://github.com/kikito',
@@ -207,6 +207,9 @@ end
 -- New API:    new(image, frames, durations [, playMode])
 --             frames is a list of Quads, typically from Grid:getFrames()
 -- Legacy API: new(image, frameWidth, frameHeight, numFrames, frameDuration, imageWidth, imageHeight [, playMode])
+-- image may be nil: the image is then supplied at draw time (see newAnimation
+-- and :draw), so one animation can be reused across several images and the
+-- library never has to hold a backend's image handle.
 function desAnim8.new(image, ...)
     local self = setmetatable({}, desAnim8)
     self.image    = image
@@ -236,6 +239,12 @@ function desAnim8.new(image, ...)
 
     initTiming(self)
     return self
+end
+
+-- Image-less constructor. Equivalent to new(nil, frames, durations, playMode);
+-- the image is passed to :draw at render time.
+function desAnim8.newAnimation(frames, durations, playMode)
+    return desAnim8.new(nil, frames, durations, playMode)
 end
 
 function desAnim8:update(dt)
@@ -284,8 +293,20 @@ function desAnim8:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
     return frame, x, y, r, sx, sy, ox, oy, kx, ky
 end
 
-function desAnim8:draw(x, y, r, sx, sy, ox, oy, kx, ky)
-    love.graphics.draw(self.image, self:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky))
+-- With a bound image:    anim:draw(x, y [, r, sx, sy, ox, oy, kx, ky])
+-- Without one (image=nil): anim:draw(image, x, y [, ...]) -- the leading
+-- argument is the image to draw onto.
+function desAnim8:draw(a, b, ...)
+    if self.image ~= nil then
+        love.graphics.draw(self.image, self:getFrameInfo(a, b, ...))
+    else
+        love.graphics.draw(a, self:getFrameInfo(b, ...))
+    end
+end
+
+-- Returns the current 1-based frame index and its Quad.
+function desAnim8:getCurrentFrame()
+    return self.currentFrame, self.frames[self.currentFrame]
 end
 
 function desAnim8:getDimensions()

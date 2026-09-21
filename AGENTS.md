@@ -114,13 +114,27 @@ local anim = desAnim8.new(image, frameWidth, frameHeight, numFrames, frameDurati
 
 `playMode`: `'loop'` (default), `'once'`, `'bounce'`, `'bounceOnce'`.
 
+Image-less API (the image is supplied at draw time):
+
+```lua
+local anim = desAnim8.newAnimation(frames, durations [, playMode])
+-- draw against any image:
+anim:draw(image, x, y [, r, sx, sy, ox, oy, kx, ky])
+```
+
+`image` in `desAnim8.new` may also be `nil` for the same effect. This keeps
+one animation reusable across several images and lets a host that owns its
+image handles (for example the LOVE-WrapLua console backends) pass the image
+in at render time instead of binding it into the animation.
+
 ### Animation methods
 
 | Method | Description |
 |---|---|
 | `anim:update(dt)` | Advance animation time; call in `love.update` |
-| `anim:draw(x, y [, r, sx, sy, ox, oy, kx, ky])` | Draw via `love.graphics.draw`; flip is applied automatically |
+| `anim:draw([image, ] x, y [, r, sx, sy, ox, oy, kx, ky])` | Draw via `love.graphics.draw`; flip is applied automatically. Pass `image` first only when the animation was built without one |
 | `anim:getFrameInfo(x, y [, r, sx, sy, ox, oy, kx, ky])` | Returns `quad, x, y, r, sx, sy, ox, oy, kx, ky` with flip applied |
+| `anim:getCurrentFrame()` | Returns the current 1-based frame index and its Quad |
 | `anim:getDimensions()` | Returns `w, h` of the current frame |
 | `anim:flipH()` | Toggle horizontal flip; returns self (chainable) |
 | `anim:flipV()` | Toggle vertical flip; returns self (chainable) |
@@ -174,7 +188,9 @@ sb:set(id, anim:getFrameInfo(x, y))
 - [x] `onLoop(anim, loopCount)` — also accepts a method name string
 - [x] `flipH()` / `flipV()` with correct transform math in `getFrameInfo`
 - [x] `getDimensions()`
-- [x] `clone()` — shares immutable tables, resets playback state
+- [x] `getCurrentFrame()` returns index and Quad
+- [x] Image-less animations (`newAnimation`, or `nil` image) drawn against an image at render time (console/backend-independent path)
+- [x] `clone()` shares immutable tables, resets playback state
 - [x] `status` string field
 - [x] Backward-compatible legacy constructor
 

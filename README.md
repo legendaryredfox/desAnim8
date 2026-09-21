@@ -1,7 +1,7 @@
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-legendaryredfox-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/legendaryredfox)
 
-### desAnim8 v0.3.0 — An animation library for LÖVE 11.5
+### desAnim8 v0.4.0: an animation library for LÖVE 11.5
 
 This project was based on [kikito's anim8](https://github.com/kikito/anim8). If you like it, please consider supporting his work.
 
@@ -102,6 +102,14 @@ Legacy single-row constructor (v0.0.1 compatible):
 local anim = desAnim8.new(image, frameWidth, frameHeight, numFrames, frameDuration, imageWidth, imageHeight)
 ```
 
+Image-less animation (the image is passed at draw time). Reuse one animation
+across several images, or let a console backend keep the image handle:
+
+```lua
+local anim = desAnim8.newAnimation(g('1-6', 1), 0.1)   -- no image bound
+function love.draw() anim:draw(image, x, y) end        -- image first
+```
+
 ---
 
 ### Drawing
@@ -149,9 +157,12 @@ anim:clone()                  -- new animation, same data, fresh state
 
 anim:isPlaying()              -- true when not paused
 anim:isPaused()               -- true when paused
+anim:getCurrentFrame()        -- returns current frame index and its Quad
 anim:getDimensions()          -- returns w, h of the current frame
 anim:getFrameInfo([...])      -- returns quad + transform params with flip applied
 ```
+
+When the animation has no bound image, pass the image first: `anim:draw(image, x, y [, ...])`.
 
 `anim.status` is `'playing'` or `'paused'`. `anim.currentFrame` is the 1-based frame index.
 
@@ -286,8 +297,12 @@ are regions, not frames, so they don't animate.
 ### Using on consoles (PSP / Vita / PS3)
 
 desAnim8 was written with [LOVE-WrapLua](https://github.com/legendaryredfox/LOVE-WrapLua)
-in mind, so the same animation code runs on homebrew hardware. Keep the console
-GPU limits in mind when building spritesheets:
+in mind, so the same animation code runs on homebrew hardware. It touches only
+`love.graphics.newQuad`, `love.graphics.draw(image, quad, ...)` and
+`quad:getViewport()`, never a backend's native image data. On backends that own
+the image handle, build the animation image-less (`newAnimation`) and pass the
+image at draw time: `anim:draw(image, x, y)`. Keep the console GPU limits in mind
+when building spritesheets:
 
 - **PSP:** textures must be **power-of-two** and **≤ 512×512**. Split larger
   sheets into multiple images.
