@@ -348,8 +348,14 @@ when building spritesheets:
 
 - **PSP:** textures must be **power-of-two** and **≤ 512×512**. Split larger
   sheets into multiple images.
-- On the wrapper's **lpp-vita** backend, spritesheet/quad drawing is still being
-  finished, so use the **OneLua** backend on Vita for animation-heavy games for now.
+- **Vita (OneLua) and PS3:** sheets up to **512×512**. **lpp-vita** and the 3DS
+  accept up to **1024×1024**. The wrapper logs a `[LOVE-WrapLua]` warning when a
+  sheet is over its backend's limit.
+- Quad drawing and animation work on every wrapper backend. lpp-vita and PS3
+  are the wrapper's "partial" tier, so check its `Implemented.md` before relying
+  on calls other than the ones desAnim8 uses.
+- LOVE-WrapLua bundles a copy of `desAnim8.lua` in `game/libraries/`; update it
+  from here when a new version is released.
 
 ---
 
@@ -363,6 +369,11 @@ when building spritesheets:
   love.graphics.setDefaultFilter('nearest', 'nearest')   -- before newImage
   local g = desAnim8.newGrid(48, 48, iw, ih, 0, 0, 1)    -- 1px border between frames
   ```
+
+- **Quad edge bleed on LOVE-WrapLua.** Besides a grid `border`, the wrapper has
+  `love.graphics.setTextureInset(px)`, which shrinks every quad's source rect so
+  linear filtering stops sampling the neighbouring frame (`0.5` for tightly
+  packed sheets; nearest filtering is better for pixel art).
 
 - **`getFrameInfo` for SpriteBatch / shaders.** When you need the raw quad plus
   transform (with flip already applied), use `getFrameInfo` instead of `draw`.
