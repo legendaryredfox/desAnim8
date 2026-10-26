@@ -244,7 +244,7 @@ anim:clearLoopRange()
 ```lua
 desAnim8.setTimeScale(0.3)   -- câmera lenta para todas as animações (padrão 1; 0 congela)
 anim:freeze(0.08)            -- hit-stop: ignora 0,08 s de dt; o dt que sobrar na mesma chamada avança
-anim:setStep(1/12)           -- anima "de dois em dois": o tempo exibido vai em múltiplos de 1/12 s
+anim:setStep(1/12)           -- anima "de dois em dois": o tempo exibido vai em múltiplos de 1/12 s (um frame mais curto que o passo pode não aparecer)
 anim:setEasing('inOutQuad')  -- curva sobre a passada inteira; ou uma função monótona [0,1] -> [0,1]
 anim:randomizeStart()        -- fase aleatória (multidões fora de sincronia)
 ```
@@ -889,7 +889,7 @@ anim:clearLoopRange()
 ```lua
 desAnim8.setTimeScale(0.3)   -- slow motion for every animation (default 1; 0 freezes)
 anim:freeze(0.08)            -- hit-stop: ignores 0.08 s of dt; leftover dt in the same call advances
-anim:setStep(1/12)           -- animate "on twos": displayed time moves in multiples of 1/12 s
+anim:setStep(1/12)           -- animate "on twos": displayed time moves in multiples of 1/12 s (a frame shorter than the step may never show)
 anim:setEasing('inOutQuad')  -- curve over the whole play-through; or a monotonic [0,1] -> [0,1] function
 anim:randomizeStart()        -- random phase (keeps crowds out of sync)
 ```
