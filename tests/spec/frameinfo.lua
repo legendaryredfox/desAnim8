@@ -133,8 +133,7 @@ test('trimmed frames land on the same world pixels as the untrimmed original', f
     eq(fox, -2, 'trim applies even without flip or origin')
 end)
 
-test('records: rotated frames and bad input are rejected', function()
-    throws(function() desAnim8.newFramesFromRecords({ { x = 0, y = 0, w = 8, h = 8, rotated = true } }, 64, 16) end, 'rotated')
+test('records: bad input is rejected', function()
     throws(function() desAnim8.newFramesFromRecords({}, 64, 16) end, 'records')
     local q, data, durations = desAnim8.newFramesFromRecords({
         { x = 0, y = 0, w = 8, h = 8, name = 'a', duration = 0.1 },
@@ -195,4 +194,99 @@ test('getWorldRect honours the auto pivot and trimmed frames', function()
     a:flipH()
     x = a:getWorldRect('hitbox', 100, 50)
     eq(x, 100, 'mirrored inside the 16 wide source frame')
+end)
+
+-- Where a point of the sprite ends up on screen, following love.graphics.draw's
+-- order: translate, rotate, scale, shear, then the offset.
+local function worldPoint(info, qx, qy)
+    local x, y, r, sx, sy, ox, oy, kx, ky = info[2], info[3], info[4], info[5], info[6], info[7], info[8], info[9], info[10]
+    r, sx, ox, oy, kx, ky = r or 0, sx or 1, ox or 0, oy or 0, kx or 0, ky or 0
+    sy = sy or sx
+    local px, py = qx - ox, qy - oy
+    px, py = px + kx * py, ky * px + py
+    px, py = px * sx, py * sy
+    local c, s = math.cos(r), math.sin(r)
+    return x + c * px - s * py, y + s * px + c * py
+end
+
+test('rotated atlas frames land where the upright sprite would, for every transform', function()
+    local rng = lcg()
+    local function maybe(p, v) if rng() < p then return v end end
+    local checked = 0
+    for _, dir in ipairs({ 'cw', 'ccw', true }) do
+        for round = 1, 300 do
+            local wu, hu = 4 + math.floor(rng() * 8), 3 + math.floor(rng() * 8)
+            local tx, ty = math.floor(rng() * 4), math.floor(rng() * 4)
+            local trimmed = rng() < 0.5
+            local function record(rotated)
+                local rec = { x = 5, y = 7, w = rotated and hu or wu, h = rotated and wu or hu, rotated = rotated }
+                if trimmed then
+                    rec.trimX, rec.trimY, rec.sourceW, rec.sourceH = tx, ty, wu + tx + 2, hu + ty + 3
+                end
+                return rec
+            end
+            local quadsU, dataU = desAnim8.newFramesFromRecords({ record(nil) }, 64, 64)
+            local quadsR, dataR = desAnim8.newFramesFromRecords({ record(dir) }, 64, 64)
+            if rng() < 0.4 then
+                local transform = { x = rng() * 3, y = rng() * 3, r = rng(), sx = 1 + rng(), sy = 1 + rng() }
+                dataU[1] = dataU[1] or {}; dataR[1] = dataR[1] or {}
+                dataU[1].transform, dataR[1].transform = transform, transform
+            end
+            local up = desAnim8.newAnimation(quadsU, 1, 'loop', { data = dataU })
+            local rot = desAnim8.newAnimation(quadsR, 1, 'loop', { data = dataR })
+            local fh, fv = rng() < 0.5, rng() < 0.5
+            up:setFlipH(fh):setFlipV(fv); rot:setFlipH(fh):setFlipV(fv)
+
+            local a = { rng() * 50, rng() * 50, maybe(0.6, rng() * 6 - 3), maybe(0.6, 0.5 + rng() * 2),
+                maybe(0.4, 0.5 + rng() * 2), maybe(0.6, rng() * 10), maybe(0.6, rng() * 10),
+                maybe(0.3, rng() - 0.5), maybe(0.3, rng() - 0.5) }
+            local iu = { up:getFrameInfo(a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9]) }
+            local ir = { rot:getFrameInfo(a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9]) }
+            local clockwise = dir ~= 'ccw'
+            for _, p in ipairs({ { 0, 0 }, { wu, 0 }, { 0, hu }, { wu, hu }, { wu * 0.3, hu * 0.7 } }) do
+                local u, v = p[1], p[2]
+                local qx, qy
+                if clockwise then qx, qy = hu - v, u else qx, qy = v, wu - u end
+                local ex, ey = worldPoint(iu, u, v)
+                local gx, gy = worldPoint(ir, qx, qy)
+                assert(math.abs(ex - gx) < 1e-6 and math.abs(ey - gy) < 1e-6,
+                    ('%s round %d flips %s/%s: upright (%.3f, %.3f) vs rotated (%.3f, %.3f)'):format(
+                        tostring(dir), round, tostring(fh), tostring(fv), ex, ey, gx, gy))
+                checked = checked + 1
+            end
+        end
+    end
+    assert(checked == 3 * 300 * 5)
+end)
+
+test('rotated frames report upright dimensions and world rectangles', function()
+    local quads, data = desAnim8.newFramesFromRecords({ { x = 0, y = 0, w = 6, h = 10, rotated = true } }, 64, 64)
+    data[1] = data[1] or {}
+    data[1].hitbox = { x = 1, y = 2, w = 3, h = 4 }
+    local a = desAnim8.newAnimation(quads, 1, 'loop', { data = data })
+    local w, h = a:getDimensions()
+    eq(w, 10); eq(h, 6)
+    local x, y, bw, bh = a:getWorldRect('hitbox', 100, 50)
+    eq(x, 101); eq(y, 52); eq(bw, 3); eq(bh, 4)
+    a:flipH()
+    x = a:getWorldRect('hitbox', 100, 50)
+    eq(x, 100 + (10 - 1 - 3), 'mirrored inside the upright 10 wide frame')
+end)
+
+test('rotated records: directions, bad values and the Starling adapter', function()
+    local function dataFor(rotated)
+        local _, data = desAnim8.newFramesFromRecords({ { x = 0, y = 0, w = 4, h = 6, rotated = rotated } }, 64, 64)
+        return data[1] and data[1].rotated
+    end
+    eq(dataFor(true), 'cw'); eq(dataFor('cw'), 'cw'); eq(dataFor('ccw'), 'ccw'); eq(dataFor(false), nil)
+    throws(function() dataFor('sideways') end, 'rotated')
+    throws(function()
+        desAnim8.atlas.fromStarling({ { name = 'a', x = 0, y = 0, width = 4, height = 4, rotated = 'true' } })
+    end, 'rotated')
+    local tp = desAnim8.atlas.fromTexturePacker({
+        frames = { { filename = 'a', frame = { x = 0, y = 0, w = 6, h = 4 }, rotated = true,
+            spriteSourceSize = { x = 0, y = 0, w = 4, h = 6 }, sourceSize = { w = 4, h = 6 } } },
+        meta = { size = { w = 16, h = 16 } },
+    })
+    eq(tp[1].rotated, true)
 end)

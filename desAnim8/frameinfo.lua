@@ -9,6 +9,7 @@ local EASINGS, resolveEasing = timing.EASINGS, timing.resolveEasing
 local Animation = {}
 
 local IDENTITY_TRANSFORM = { x = 0, y = 0, r = 0, sx = 1, sy = 1 }
+local HALF_PI = math.pi / 2
 
 ---@return number
 ---@nodiscard
@@ -63,7 +64,7 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
     -- pixel snap, auto pivot). Cached; the setters reset it to nil.
     local fancy = self._fancy
     if fancy == nil then
-        fancy = (self._trim or self._transforms or self._snap or self._autoPivot) and true or false
+        fancy = (self._trim or self._transforms or self._rotated or self._snap or self._autoPivot) and true or false
         self._fancy = fancy
     end
     if not fancy then
@@ -106,7 +107,8 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
     end
     local dx, dy, dr, tsx, tsy
     if self._transforms then dx, dy, dr, tsx, tsy = frameTransform(self, f) end
-    if fh or fv or trim or dx then
+    local rotated = self._rotated and self._rotated[f]
+    if fh or fv or trim or dx or rotated then
         r,  sx = r or 0, sx or 1
         sy     = sy or sx -- love.graphics.draw defaults sy to sx
         ox, oy = ox or 0, oy or 0
@@ -128,6 +130,7 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
             tx, ty = 0, 0
             local _
             _, _, w, h = frame:getViewport()
+            if rotated then w, h = h, w end
         end
         if fh then
             sx = -sx
@@ -144,6 +147,22 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
             ky = -ky
         else
             oy = oy - ty
+        end
+        if rotated then
+            -- Everything above treated the frame as upright. The stored quad is that
+            -- sprite turned 90 degrees, so turn the parameters the other way: swap
+            -- the scale axes, swap and negate the shear, rotate by -90 (clockwise
+            -- storage) or +90 degrees, and move the origin into the quad's axes.
+            local _, _, qw, qh = frame:getViewport()
+            sx, sy = sy, sx
+            kx, ky = -ky, -kx
+            if rotated == 'cw' then
+                r = r - HALF_PI
+                ox, oy = qw - oy, ox
+            else
+                r = r + HALF_PI
+                ox, oy = oy, qh - ox
+            end
         end
     end
     return frame, x, y, r, sx, sy, ox, oy, kx, ky
@@ -199,6 +218,7 @@ function Animation:getWorldRect(name, x, y, sx, sy, ox, oy)
     else
         local _
         _, _, w, h = self.frames[f]:getViewport()
+        if self._rotated and self._rotated[f] then w, h = h, w end
     end
     local rx, ry = rect.x, rect.y
     if self.flippedH then rx = w - rx - rect.w end

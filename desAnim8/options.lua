@@ -60,6 +60,14 @@ local function checkOptions(opts, frameCount, level)
             end
             local c = {}
             for k, v in pairs(values) do c[k] = v end
+            local rot = c.rotated
+            if rot == true or rot == 'cw' then
+                c.rotated = 'cw'
+            elseif rot == false then
+                c.rotated = nil
+            elseif rot ~= nil and rot ~= 'ccw' then
+                error(('option data: frame %d rotated must be true, "cw" or "ccw"'):format(frame), level)
+            end
             local tf = c.transform
             if tf ~= nil then
                 if type(tf) ~= 'table' then

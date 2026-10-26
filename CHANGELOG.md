@@ -12,6 +12,7 @@
 - Runtime changes: `setPlayMode`, `setDurations`.
 - Constructor `opts` (fifth argument): `ticks`, `weights`, `jitter`, `rng`, `randomLength`, `data`; new `'random'` play mode.
 - Per-frame data: `getFrameData`, `getWorldRect`, `setAutoPivot`, trim offsets and keyframe `transform` data with `setInterpolation`.
+- Rotated atlas frames: `rotated = true`/`'cw'`/`'ccw'` in frame records (TexturePacker "Allow rotation"); drawing, `getDimensions` and `getWorldRect` work on the upright sprite with any flip, scale, rotation and shear, verified pixel for pixel in LÖVE.
 - Atlases: `newFramesFromRecords`, `atlas.fromTexturePacker`, `atlas.fromStarling`, `atlas.fromAseprite`.
 - Aseprite: `newFromAseprite` (tags, directions, slices as frame data) and `newSetFromAseprite`.
 - Sheet tools: `scanBounds`, `dataFromLists`, `sliceByAlpha`, `newQuadsFromRects`.

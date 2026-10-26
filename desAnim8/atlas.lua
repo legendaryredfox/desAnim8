@@ -7,6 +7,10 @@ local assertPositiveInteger = util.assertPositiveInteger
 
 -- Frame records are the common shape every adapter produces:
 --   { x, y, w, h, trimX, trimY, sourceW, sourceH, name, duration, rotated }
+-- x, y, w, h are the rectangle as stored in the image: for a rotated frame its
+-- width and height are swapped. trim and source sizes describe the upright sprite.
+-- rotated: true or 'cw' (stored turned 90 degrees clockwise, as TexturePacker,
+-- Phaser and Starling do) or 'ccw' (counter-clockwise).
 -- (trim and source fields default to "untrimmed"; duration is in seconds).
 
 -- Returns quads, data (for the `data` constructor option) and, when every record
@@ -25,9 +29,6 @@ local function newFramesFromRecords(records, imageWidth, imageHeight)
     assertPositiveInteger(imageHeight, 'imageHeight', 3)
     local quads, data, durations, haveDurations = {}, {}, {}, true
     for i, rec in ipairs(records) do
-        if rec.rotated then
-            error(('newFramesFromRecords: record %d is rotated; export the atlas without rotation'):format(i), 2)
-        end
         for _, key in ipairs({ 'x', 'y', 'w', 'h' }) do
             if type(rec[key]) ~= 'number' then
                 error(('newFramesFromRecords: record %d needs a numeric %s'):format(i, key), 2)
@@ -40,6 +41,15 @@ local function newFramesFromRecords(records, imageWidth, imageHeight)
         local sw, sh = rec.sourceW or rec.w, rec.sourceH or rec.h
         if tx ~= 0 or ty ~= 0 or sw ~= rec.w or sh ~= rec.h then
             d.trim = { x = tx, y = ty, w = sw, h = sh }
+        end
+        local rotated = rec.rotated
+        if rotated == true or rotated == 'cw' then
+            d.rotated = 'cw'
+        elseif rotated == 'ccw' then
+            d.rotated = 'ccw'
+        elseif rotated ~= nil and rotated ~= false then
+            error(('newFramesFromRecords: record %d has an invalid rotated value %s (use true, "cw" or "ccw")'):format(
+                i, tostring(rotated)), 2)
         end
         if next(d) ~= nil then data[i] = d end
         durations[i] = rec.duration
@@ -93,11 +103,14 @@ function atlas.fromStarling(list)
     end
     local records = {}
     for i, e in ipairs(list) do
+        if e.rotated == true or e.rotated == 'true' then
+            error(('fromStarling: entry %d is rotated; export the atlas without rotation'):format(i), 2)
+        end
         records[i] = {
             x = e.x, y = e.y, w = e.width, h = e.height,
             trimX = -(e.frameX or 0), trimY = -(e.frameY or 0),
             sourceW = e.frameWidth or e.width, sourceH = e.frameHeight or e.height,
-            name = e.name, rotated = e.rotated == true or e.rotated == 'true',
+            name = e.name,
         }
     end
     return records

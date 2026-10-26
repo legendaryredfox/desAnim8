@@ -470,6 +470,14 @@ local function checkOptions(opts, frameCount, level)
             end
             local c = {}
             for k, v in pairs(values) do c[k] = v end
+            local rot = c.rotated
+            if rot == true or rot == 'cw' then
+                c.rotated = 'cw'
+            elseif rot == false then
+                c.rotated = nil
+            elseif rot ~= nil and rot ~= 'ccw' then
+                error(('option data: frame %d rotated must be true, "cw" or "ccw"'):format(frame), level)
+            end
             local tf = c.transform
             if tf ~= nil then
                 if type(tf) ~= 'table' then
@@ -827,6 +835,7 @@ end
 ---@return integer h
 function Animation:getDimensions()
     local _, _, w, h = self.frames[self.currentFrame]:getViewport()
+    if self._rotated and self._rotated[self.currentFrame] then return h, w end
     return w, h
 end
 
@@ -1191,6 +1200,7 @@ local EASINGS, resolveEasing = timing.EASINGS, timing.resolveEasing
 local Animation = {}
 
 local IDENTITY_TRANSFORM = { x = 0, y = 0, r = 0, sx = 1, sy = 1 }
+local HALF_PI = math.pi / 2
 
 ---@return number
 ---@nodiscard
@@ -1245,7 +1255,7 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
     -- pixel snap, auto pivot). Cached; the setters reset it to nil.
     local fancy = self._fancy
     if fancy == nil then
-        fancy = (self._trim or self._transforms or self._snap or self._autoPivot) and true or false
+        fancy = (self._trim or self._transforms or self._rotated or self._snap or self._autoPivot) and true or false
         self._fancy = fancy
     end
     if not fancy then
@@ -1288,7 +1298,8 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
     end
     local dx, dy, dr, tsx, tsy
     if self._transforms then dx, dy, dr, tsx, tsy = frameTransform(self, f) end
-    if fh or fv or trim or dx then
+    local rotated = self._rotated and self._rotated[f]
+    if fh or fv or trim or dx or rotated then
         r,  sx = r or 0, sx or 1
         sy     = sy or sx -- love.graphics.draw defaults sy to sx
         ox, oy = ox or 0, oy or 0
@@ -1310,6 +1321,7 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
             tx, ty = 0, 0
             local _
             _, _, w, h = frame:getViewport()
+            if rotated then w, h = h, w end
         end
         if fh then
             sx = -sx
@@ -1326,6 +1338,22 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
             ky = -ky
         else
             oy = oy - ty
+        end
+        if rotated then
+            -- Everything above treated the frame as upright. The stored quad is that
+            -- sprite turned 90 degrees, so turn the parameters the other way: swap
+            -- the scale axes, swap and negate the shear, rotate by -90 (clockwise
+            -- storage) or +90 degrees, and move the origin into the quad's axes.
+            local _, _, qw, qh = frame:getViewport()
+            sx, sy = sy, sx
+            kx, ky = -ky, -kx
+            if rotated == 'cw' then
+                r = r - HALF_PI
+                ox, oy = qw - oy, ox
+            else
+                r = r + HALF_PI
+                ox, oy = oy, qh - ox
+            end
         end
     end
     return frame, x, y, r, sx, sy, ox, oy, kx, ky
@@ -1381,6 +1409,7 @@ function Animation:getWorldRect(name, x, y, sx, sy, ox, oy)
     else
         local _
         _, _, w, h = self.frames[f]:getViewport()
+        if self._rotated and self._rotated[f] then w, h = h, w end
     end
     local rx, ry = rect.x, rect.y
     if self.flippedH then rx = w - rx - rect.w end
@@ -1957,6 +1986,10 @@ local function build(image, frames, durations, playMode, opts)
                 self._trim = self._trim or {}
                 self._trim[frame] = d.trim
             end
+            if d.rotated then
+                self._rotated = self._rotated or {}
+                self._rotated[frame] = d.rotated
+            end
             if d.transform then
                 self._transforms = self._transforms or {}
                 self._transforms[frame] = d.transform
@@ -2264,6 +2297,10 @@ local assertPositiveInteger = util.assertPositiveInteger
 
 -- Frame records are the common shape every adapter produces:
 --   { x, y, w, h, trimX, trimY, sourceW, sourceH, name, duration, rotated }
+-- x, y, w, h are the rectangle as stored in the image: for a rotated frame its
+-- width and height are swapped. trim and source sizes describe the upright sprite.
+-- rotated: true or 'cw' (stored turned 90 degrees clockwise, as TexturePacker,
+-- Phaser and Starling do) or 'ccw' (counter-clockwise).
 -- (trim and source fields default to "untrimmed"; duration is in seconds).
 
 -- Returns quads, data (for the `data` constructor option) and, when every record
@@ -2282,9 +2319,6 @@ local function newFramesFromRecords(records, imageWidth, imageHeight)
     assertPositiveInteger(imageHeight, 'imageHeight', 3)
     local quads, data, durations, haveDurations = {}, {}, {}, true
     for i, rec in ipairs(records) do
-        if rec.rotated then
-            error(('newFramesFromRecords: record %d is rotated; export the atlas without rotation'):format(i), 2)
-        end
         for _, key in ipairs({ 'x', 'y', 'w', 'h' }) do
             if type(rec[key]) ~= 'number' then
                 error(('newFramesFromRecords: record %d needs a numeric %s'):format(i, key), 2)
@@ -2297,6 +2331,15 @@ local function newFramesFromRecords(records, imageWidth, imageHeight)
         local sw, sh = rec.sourceW or rec.w, rec.sourceH or rec.h
         if tx ~= 0 or ty ~= 0 or sw ~= rec.w or sh ~= rec.h then
             d.trim = { x = tx, y = ty, w = sw, h = sh }
+        end
+        local rotated = rec.rotated
+        if rotated == true or rotated == 'cw' then
+            d.rotated = 'cw'
+        elseif rotated == 'ccw' then
+            d.rotated = 'ccw'
+        elseif rotated ~= nil and rotated ~= false then
+            error(('newFramesFromRecords: record %d has an invalid rotated value %s (use true, "cw" or "ccw")'):format(
+                i, tostring(rotated)), 2)
         end
         if next(d) ~= nil then data[i] = d end
         durations[i] = rec.duration
@@ -2350,11 +2393,14 @@ function atlas.fromStarling(list)
     end
     local records = {}
     for i, e in ipairs(list) do
+        if e.rotated == true or e.rotated == 'true' then
+            error(('fromStarling: entry %d is rotated; export the atlas without rotation'):format(i), 2)
+        end
         records[i] = {
             x = e.x, y = e.y, w = e.width, h = e.height,
             trimX = -(e.frameX or 0), trimY = -(e.frameY or 0),
             sourceW = e.frameWidth or e.width, sourceH = e.frameHeight or e.height,
-            name = e.name, rotated = e.rotated == true or e.rotated == 'true',
+            name = e.name,
         }
     end
     return records
@@ -3325,7 +3371,7 @@ local desAnim8 = {
 ---@field sourceH number?
 ---@field name string?
 ---@field duration number? seconds
----@field rotated boolean?
+---@field rotated (boolean|'cw'|'ccw')? stored turned 90 degrees (true is clockwise)
 
 ---@class desAnim8.Rect
 ---@field x number

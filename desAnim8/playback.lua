@@ -152,6 +152,7 @@ end
 ---@return integer h
 function Animation:getDimensions()
     local _, _, w, h = self.frames[self.currentFrame]:getViewport()
+    if self._rotated and self._rotated[self.currentFrame] then return h, w end
     return w, h
 end
 

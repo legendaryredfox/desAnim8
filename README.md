@@ -349,7 +349,7 @@ local anim = desAnim8.newFromAseprite(json, image, 'run', { decode = myJsonDecod
 - Direção da tag: `forward` é `loop`, `pingpong` é `bounce`, `reverse` inverte a lista de frames, `pingpong_reverse` inverte um `bounce`. `opts.playMode` troca o modo. As demais opções vão para o construtor.
 - Durações vêm em milissegundos e viram segundos. O tamanho da imagem vem de `meta.size` (ou da imagem passada).
 - **Slices** viram dados por frame: cada slice vira uma chave com o seu nome (o retângulo `bounds`), valendo da chave `frame` até a próxima; um slice com `pivot` define também `pivot`. O campo `repeat` das tags é ignorado.
-- Formato hash dá erro com o nome do problema; frames `rotated` são rejeitados.
+- Formato hash dá erro com o nome do problema.
 
 Exemplo completo, com um decodificador JSON mínimo e um export de verdade: `love examples/aseprite` (slice `hurtbox` virando hitbox e slice `feet` virando pivô).
 
@@ -368,7 +368,9 @@ local quads, data, durations = desAnim8.newFramesFromRecords(records, iw, ih)
 local anim = desAnim8.newAnimation(quads, 0.1, 'loop', { data = data })
 ```
 
-Um registro de frame é `{x, y, w, h, trimX, trimY, sourceW, sourceH, name, duration}`; você pode montar os seus. Atlas com rotação não são aceitos (exporte sem rotação).
+Um registro de frame é `{x, y, w, h, trimX, trimY, sourceW, sourceH, name, duration, rotated}`; você pode montar os seus. `x, y, w, h` é o retângulo **como está na imagem**; `trimX, trimY, sourceW, sourceH` descrevem o sprite em pé.
+
+**Frames rotacionados** ("Allow rotation" do TexturePacker) funcionam: `rotated = true` (ou `'cw'`) é o sprite guardado girado 90° no sentido horário, como TexturePacker e Phaser fazem, e `'ccw'` é o anti-horário. Nesse caso `w` e `h` do retângulo vêm trocados (a largura em pé é o `h` guardado), e `getFrameInfo`, `draw`, `getDimensions` e `getWorldRect` trabalham com o sprite em pé, com qualquer flip, escala, rotação e cisalhamento. O adaptador de Starling ainda recusa frames rotacionados (exporte sem rotação).
 
 ### Ferramentas de sheet **[LÖVE]**
 
@@ -998,7 +1000,7 @@ local anim = desAnim8.newFromAseprite(json, image, 'run', { decode = myJsonDecod
 - Tag direction: `forward` is `loop`, `pingpong` is `bounce`, `reverse` reverses the frame list, `pingpong_reverse` reverses a `bounce`. `opts.playMode` overrides the mode. Other options go to the constructor.
 - Durations arrive in milliseconds and become seconds. The image size comes from `meta.size` (or from the image you pass).
 - **Slices** become per-frame data: each slice is a key under its name (the `bounds` rectangle), valid from its `frame` key until the next one; a slice with a `pivot` also sets `pivot`. The tag `repeat` field is ignored.
-- The hash form raises an error naming the problem; `rotated` frames are rejected.
+- The hash form raises an error naming the problem.
 
 A full example, with a minimal JSON decoder and a real-shaped export: `love examples/aseprite` (a `hurtbox` slice becoming a hitbox and a `feet` slice becoming the pivot).
 
@@ -1017,7 +1019,9 @@ local quads, data, durations = desAnim8.newFramesFromRecords(records, iw, ih)
 local anim = desAnim8.newAnimation(quads, 0.1, 'loop', { data = data })
 ```
 
-A frame record is `{x, y, w, h, trimX, trimY, sourceW, sourceH, name, duration}`; you can build your own. Atlases with rotation are not accepted (export without rotation).
+A frame record is `{x, y, w, h, trimX, trimY, sourceW, sourceH, name, duration, rotated}`; you can build your own. `x, y, w, h` is the rectangle **as stored in the image**; `trimX, trimY, sourceW, sourceH` describe the upright sprite.
+
+**Rotated frames** (TexturePacker's "Allow rotation") work: `rotated = true` (or `'cw'`) means the sprite is stored turned 90 degrees clockwise, as TexturePacker and Phaser do, and `'ccw'` means counter-clockwise. The stored rectangle's `w` and `h` are then swapped (the upright width is the stored `h`), and `getFrameInfo`, `draw`, `getDimensions` and `getWorldRect` all work in terms of the upright sprite, with any flip, scale, rotation and shear. The Starling adapter still refuses rotated frames (export without rotation).
 
 ### Sheet tools **[LÖVE]**
 

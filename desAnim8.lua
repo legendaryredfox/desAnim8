@@ -57,7 +57,7 @@ local desAnim8 = {
 ---@field sourceH number?
 ---@field name string?
 ---@field duration number? seconds
----@field rotated boolean?
+---@field rotated (boolean|'cw'|'ccw')? stored turned 90 degrees (true is clockwise)
 
 ---@class desAnim8.Rect
 ---@field x number

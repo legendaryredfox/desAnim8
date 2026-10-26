@@ -150,6 +150,61 @@ function love.load()
         check('watcher stats a real file', polled == 0 and love.filesystem.getInfo(stamp).modtime ~= nil)
         love.filesystem.remove(stamp)
 
+        -- rotated atlas frames must draw exactly like the upright sprite
+        do
+            local up = love.image.newImageData(6, 4)
+            up:setPixel(0, 0, 1, 0, 0, 1); up:setPixel(5, 0, 0, 1, 0, 1)
+            up:setPixel(0, 3, 0, 0, 1, 1); up:setPixel(2, 1, 1, 1, 0, 1); up:setPixel(4, 2, 1, 0, 1, 1)
+            local function stored(clockwise)
+                local out = love.image.newImageData(4, 6)
+                for v = 0, 3 do
+                    for u = 0, 5 do
+                        local r, g, b, a = up:getPixel(u, v)
+                        if a > 0 then
+                            if clockwise then out:setPixel(3 - v, u, r, g, b, a) else out:setPixel(v, 5 - u, r, g, b, a) end
+                        end
+                    end
+                end
+                return out
+            end
+            local function snapshot(fn)
+                love.graphics.setCanvas(canvas)
+                love.graphics.clear(0, 0, 0, 0)
+                fn()
+                love.graphics.setCanvas()
+                return canvas:newImageData()
+            end
+            local function same(a, b)
+                for y = 0, a:getHeight() - 1 do
+                    for x = 0, a:getWidth() - 1 do
+                        local r1, g1, b1, a1 = a:getPixel(x, y)
+                        local r2, g2, b2, a2 = b:getPixel(x, y)
+                        if math.abs(r1 - r2) + math.abs(g1 - g2) + math.abs(b1 - b2) + math.abs(a1 - a2) > 0.01 then return false end
+                    end
+                end
+                return true
+            end
+            local upImage = love.graphics.newImage(up)
+            upImage:setFilter('nearest', 'nearest')   -- linear filtering would blend different neighbours
+            local upAnim = desAnim8.newAnimation(desAnim8.newFramesFromRecords({ { x = 0, y = 0, w = 6, h = 4 } }, 6, 4), 1)
+            for _, dir in ipairs({ 'cw', 'ccw' }) do
+                local storedImage = love.graphics.newImage(stored(dir == 'cw'))
+                storedImage:setFilter('nearest', 'nearest')
+                local rotQuads, rotData = desAnim8.newFramesFromRecords({ { x = 0, y = 0, w = 4, h = 6, rotated = dir } }, 4, 6)
+                local rotAnim = desAnim8.newAnimation(rotQuads, 1, 'loop', { data = rotData })
+                local all = true
+                for _, flips in ipairs({ { false, false }, { true, false }, { false, true }, { true, true } }) do
+                    upAnim:setFlipH(flips[1]):setFlipV(flips[2]); rotAnim:setFlipH(flips[1]):setFlipV(flips[2])
+                    for _, args in ipairs({ { 40, 40 }, { 60, 50, 0, 3, 3, 2, 1 }, { 80, 60, 0.7, 2, 3, 3, 2 } }) do
+                        local a = snapshot(function() upAnim:draw(upImage, args[1], args[2], args[3], args[4], args[5], args[6], args[7]) end)
+                        local b = snapshot(function() rotAnim:draw(storedImage, args[1], args[2], args[3], args[4], args[5], args[6], args[7]) end)
+                        if not same(a, b) then all = false end
+                    end
+                end
+                check('rotated frame (' .. dir .. ') draws like the upright sprite in every flip', all)
+            end
+        end
+
         local slices = desAnim8.sliceByAlpha(sheet)
         check('sliceByAlpha on real ImageData', #slices == 2 and slices[2].x == 20, tostring(#slices))
     end)

@@ -62,6 +62,10 @@ local function build(image, frames, durations, playMode, opts)
                 self._trim = self._trim or {}
                 self._trim[frame] = d.trim
             end
+            if d.rotated then
+                self._rotated = self._rotated or {}
+                self._rotated[frame] = d.rotated
+            end
             if d.transform then
                 self._transforms = self._transforms or {}
                 self._transforms[frame] = d.transform
