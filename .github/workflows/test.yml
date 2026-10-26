@@ -21,6 +21,13 @@ jobs:
       - run: lua5.4 tests/run.lua
       - run: lua tests/run.lua
       - run: luajit tests/bench.lua
+      - name: Single-file build is current and passes
+        run: |
+          lua tools/bundle.lua --check
+          DESANIM8_BUNDLE=dist/desAnim8.lua luajit tests/run.lua
+          DESANIM8_BUNDLE=dist/desAnim8.lua lua5.1 tests/run.lua
+          DESANIM8_BUNDLE=dist/desAnim8.lua lua5.4 tests/run.lua
+          DESANIM8_BUNDLE=dist/desAnim8.lua lua tests/run.lua
 
   lint:
     runs-on: ubuntu-latest
@@ -28,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y luarocks lua5.4 liblua5.4-dev
       - run: sudo luarocks install luacheck
-      - run: luacheck desAnim8.lua tests
+      - run: luacheck desAnim8.lua desAnim8 tests tools
 
   rockspec:
     runs-on: ubuntu-latest
