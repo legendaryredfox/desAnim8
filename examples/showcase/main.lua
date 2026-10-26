@@ -40,6 +40,25 @@ local x, y = 320, 240
 local showCrowd, trailOn, tick = false, false, 0
 local log = {}
 
+-- DESANIM8_DEMO_RECORD=<prefix> plays a fixed script at 30 fps and saves every
+-- frame as <prefix>_NNNN.png in LÖVE's save directory (used to make the README GIF).
+local RECORD = os.getenv('DESANIM8_DEMO_RECORD')
+local held, clock, nextEvent, frameCount = {}, 0, 1, 0
+local TOTAL = 6.5
+local script = {
+    { 0.8, function() held.right = true end },
+    { 2.2, function() held.right = nil end },
+    { 2.4, function() love.keypressed('space') end },
+    { 3.2, function() love.keypressed('t'); held.left = true end },
+    { 4.6, function() held.left = nil end },
+    { 4.8, function() love.keypressed('b') end },
+}
+
+local function isDown(key)
+    if RECORD then return held[key] end
+    return love.keyboard.isDown(key)
+end
+
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     image = makeSheet()
@@ -53,6 +72,7 @@ function love.load()
     hero:setPixelSnap(true)
 
     crowd = desAnim8.newBatch(image, grid('1-6', 2), 0.07, 'loop', 400)
+    if RECORD then math.randomseed(1) end
     for _ = 1, 200 do crowd:add(math.random(0, 600), math.random(40, 330), 0, 1, 1) end
     crowd:randomizePhases()
 end
@@ -87,7 +107,15 @@ function love.keypressed(key)
 end
 
 function love.update(dt)
-    local dx = (love.keyboard.isDown('right') and 1 or 0) - (love.keyboard.isDown('left') and 1 or 0)
+    if RECORD then
+        dt = 1 / 30
+        clock = clock + dt
+        while script[nextEvent] and script[nextEvent][1] <= clock do
+            script[nextEvent][2]()
+            nextEvent = nextEvent + 1
+        end
+    end
+    local dx = (isDown('right') and 1 or 0) - (isDown('left') and 1 or 0)
     x = x + dx * 120 * dt
     local _, name = hero:getCurrent()
     if name ~= 'hit' then
@@ -113,6 +141,12 @@ function love.draw()
     end
 
     love.graphics.print(('clip %s  frame %d  phase %.2f  run ticks %d  fps %d'):format(
-        select(2, hero:getCurrent()), hero:getCurrentFrameNumber(), hero:getPhase(), tick, love.timer.getFPS()), 10, 10)
+        select(2, hero:getCurrent()), hero:getCurrentFrameNumber(), hero:getPhase(), tick, RECORD and 30 or love.timer.getFPS()), 10, 10)
     for row, line in ipairs(log) do love.graphics.print(line, 10, 10 + 16 * row) end
+
+    if RECORD then
+        frameCount = frameCount + 1
+        love.graphics.captureScreenshot(('%s_%04d.png'):format(RECORD, frameCount))
+        if clock > TOTAL then love.event.quit() end
+    end
 end

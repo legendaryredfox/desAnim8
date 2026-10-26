@@ -4,6 +4,8 @@
 
 **[Português (BR)](#português-br)** | **[English](#english)**
 
+![Demonstração do examples/showcase: clips, flip, hit-stop, rastro, lote de sprites e linha do tempo / examples/showcase demo: clips, flip, hit-stop, trail, sprite batch and timeline](docs/showcase.gif)
+
 ---
 
 <a id="português-br"></a>

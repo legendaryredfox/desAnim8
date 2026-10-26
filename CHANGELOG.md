@@ -19,6 +19,7 @@
 - Debugging: `drawBounds`, `desAnim8.debug.drawTimeline`, `desAnim8.debug.scrub`.
 - Composition: `newSet` (named clips with `play`, `queue`, `keepPhase`), `newComposite` (layers on one clock), `newBatch` (many entries, one SpriteBatch), `newWatcher`.
 - `getState`/`setState` for saving and restoring playback.
+- `docs/showcase.gif` in the README, recorded from the example by `tools/record-gif.sh` (the example has a scripted recording mode).
 - LuaCATS annotations, a rockspec, `.luacheckrc`, `examples/showcase`, `tests/bench.lua`, and the README in Brazilian Portuguese and English.
 
 ### Fixed
