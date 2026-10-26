@@ -351,6 +351,8 @@ local anim = desAnim8.newFromAseprite(json, image, 'run', { decode = myJsonDecod
 - **Slices** viram dados por frame: cada slice vira uma chave com o seu nome (o retângulo `bounds`), valendo da chave `frame` até a próxima; um slice com `pivot` define também `pivot`. O campo `repeat` das tags é ignorado.
 - Formato hash dá erro com o nome do problema; frames `rotated` são rejeitados.
 
+Exemplo completo, com um decodificador JSON mínimo e um export de verdade: `love examples/aseprite` (slice `hurtbox` virando hitbox e slice `feet` virando pivô).
+
 Um **conjunto de clips**, um por tag, com um só comando:
 
 ```lua
@@ -648,6 +650,7 @@ DESANIM8_BUNDLE=dist/desAnim8.lua luajit tests/run.lua   # os mesmos testes no a
 xvfb-run -a love tests/smoke    # renderiza numa janela LÖVE real e confere extensões de pixels
 luajit tests/bench.lua          # custo de update() para acompanhar regressões
 love examples/showcase          # demonstração interativa
+love examples/aseprite          # importação do Aseprite de ponta a ponta
 ```
 
 ---
@@ -997,6 +1000,8 @@ local anim = desAnim8.newFromAseprite(json, image, 'run', { decode = myJsonDecod
 - **Slices** become per-frame data: each slice is a key under its name (the `bounds` rectangle), valid from its `frame` key until the next one; a slice with a `pivot` also sets `pivot`. The tag `repeat` field is ignored.
 - The hash form raises an error naming the problem; `rotated` frames are rejected.
 
+A full example, with a minimal JSON decoder and a real-shaped export: `love examples/aseprite` (a `hurtbox` slice becoming a hitbox and a `feet` slice becoming the pivot).
+
 A **set of clips**, one per tag, in one call:
 
 ```lua
@@ -1294,4 +1299,5 @@ DESANIM8_BUNDLE=dist/desAnim8.lua luajit tests/run.lua   # the same tests agains
 xvfb-run -a love tests/smoke    # renders in a real LÖVE window and checks pixel extents
 luajit tests/bench.lua          # update() cost, to spot regressions
 love examples/showcase          # interactive demo
+love examples/aseprite          # Aseprite import, end to end
 ```

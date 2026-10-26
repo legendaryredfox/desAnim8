@@ -198,6 +198,7 @@ local function clearDraws()
 end
 
 return {
+    root = root,
     results = results,
     clearDraws = clearDraws,
     desAnim8 = desAnim8,

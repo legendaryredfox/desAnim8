@@ -19,6 +19,7 @@
 - Debugging: `drawBounds`, `desAnim8.debug.drawTimeline`, `desAnim8.debug.scrub`.
 - Composition: `newSet` (named clips with `play`, `queue`, `setNext`, `keepPhase`), `newComposite` (layers on one clock), `newBatch` (many entries, one SpriteBatch), `newWatcher`.
 - `getState`/`setState` for saving and restoring playback.
+- `examples/aseprite`: the Aseprite importer end to end, with a minimal JSON decoder and an export that includes tags and slices.
 - `docs/showcase.gif` in the README, recorded from the example by `tools/record-gif.sh` (the example has a scripted recording mode).
 - LuaCATS annotations, a rockspec, `.luacheckrc`, `examples/showcase`, `tests/bench.lua`, and the README in Brazilian Portuguese and English.
 

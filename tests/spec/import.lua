@@ -111,3 +111,27 @@ test('aseprite and atlas: size fallback, bad tags, passthrough options, bad inpu
     throws(function() desAnim8.atlas.fromStarling({}) end, 'non%-empty')
     throws(function() desAnim8.newFramesFromRecords({ { x = 'a', y = 0, w = 1, h = 1 } }, 8, 8) end, 'numeric')
 end)
+
+test('the Aseprite example: its JSON decoder and export import cleanly', function()
+    local json = dofile(env.root .. '/examples/aseprite/json.lua')
+    local file = assert(io.open(env.root .. '/examples/aseprite/hero.json', 'rb'))
+    local text = file:read('*a')
+    file:close()
+
+    local set = desAnim8.newSetFromAseprite(text, IMG, { decode = json.decode, initial = 'idle' })
+    local idle, name = set:getCurrent()
+    eq(name, 'idle'); eq(idle:getPlayMode(), 'bounce'); eq(idle:getFrameCount(), 4)
+    near(idle:getDuration(), 0.12 * 6)
+    local run = set:getClip('run')
+    eq(run:getPlayMode(), 'loop'); eq(run:getFrameCount(), 4)
+    local box = idle:getFrameData('hurtbox')
+    eq(box.x, 8); eq(box.w, 16)
+    eq(idle:getFrameData('pivot').y, 28)
+
+    -- decoder details the importer relies on
+    local decoded = json.decode('{"a":[1,2.5,-3e2,true,false,null,"x\\n\\u0041"],"b":{}}')
+    eq(decoded.a[2], 2.5); eq(decoded.a[3], -300); eq(decoded.a[4], true); eq(decoded.a[6], 'x\nA', 'null leaves no hole in an array')
+    eq(next(decoded.b), nil)
+    local ok = pcall(json.decode, '{"a": }')
+    eq(ok, false)
+end)
