@@ -52,6 +52,7 @@ function Animation:update(dt)
         if flash.left <= 0 then
             self._flash = nil
             self._plain = nil
+            self._styled = nil
         end
     end
     -- Also rejects NaN, which would otherwise poison the timer permanently.

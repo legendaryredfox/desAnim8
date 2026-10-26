@@ -100,6 +100,7 @@ function Animation:clone()
     end
     c._flash    = nil
     c._plain    = nil
+    c._styled   = nil
     c._timer    = 0
     c._position = 1
     c._loops    = 0

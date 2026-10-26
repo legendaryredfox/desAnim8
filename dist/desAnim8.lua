@@ -727,6 +727,7 @@ function Animation:update(dt)
         if flash.left <= 0 then
             self._flash = nil
             self._plain = nil
+            self._styled = nil
         end
     end
     -- Also rejects NaN, which would otherwise poison the timer permanently.
@@ -1239,6 +1240,37 @@ end
 ---@return number? kx
 ---@return number? ky
 function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
+    local fh, fv = self.flippedH, self.flippedV
+    -- _fancy: some feature beyond a plain frame is configured (trim, transforms,
+    -- pixel snap, auto pivot). Cached; the setters reset it to nil.
+    local fancy = self._fancy
+    if fancy == nil then
+        fancy = (self._trim or self._transforms or self._snap or self._autoPivot) and true or false
+        self._fancy = fancy
+    end
+    if not fancy then
+        local frame = self.frames[self.currentFrame]
+        if not (fh or fv) then return frame, x, y, r, sx, sy, ox, oy, kx, ky end
+        -- flips only: the original, short formula
+        r,  sx = r or 0, sx or 1
+        sy     = sy or sx
+        ox, oy = ox or 0, oy or 0
+        kx, ky = kx or 0, ky or 0
+        local _, _, w, h = frame:getViewport()
+        if fh then
+            sx = -sx
+            ox = w - ox
+            kx = -kx
+            ky = -ky
+        end
+        if fv then
+            sy = -sy
+            oy = h - oy
+            kx = -kx
+            ky = -ky
+        end
+        return frame, x, y, r, sx, sy, ox, oy, kx, ky
+    end
     local f = self.currentFrame
     local frame = self.frames[f]
     local trim = self._trim and self._trim[f]
@@ -1254,7 +1286,6 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
             if oy == nil then oy = pivot.y end
         end
     end
-    local fh, fv = self.flippedH, self.flippedV
     local dx, dy, dr, tsx, tsy
     if self._transforms then dx, dy, dr, tsx, tsy = frameTransform(self, f) end
     if fh or fv or trim or dx then
@@ -1317,6 +1348,7 @@ end
 function Animation:setAutoPivot(enabled)
     if type(enabled) ~= 'boolean' then error('setAutoPivot: expected a boolean', 2) end
     self._autoPivot = enabled
+    self._fancy = nil
     return self
 end
 
@@ -1448,12 +1480,20 @@ end
 -- of that it is a single love.graphics.draw call.
 local function drawFrame(self, image, ...)
     local gfx = love.graphics
-    local trail, onion = self._trail, self._onion
-    local tint, flash, blend, shader = self._color, self._flash, self._blend, self._shader
-    if not (tint or flash or blend or shader or trail or onion) then
+    -- _styled: any tint, flash, blend, shader, trail or onion is set. Cached; the
+    -- setters (and the flash running out) reset it to nil.
+    local styled = self._styled
+    if styled == nil then
+        styled = (self._color or self._flash or self._blend or self._shader or self._trail or self._onion)
+            and true or false
+        self._styled = styled
+    end
+    if not styled then
         gfx.draw(image, self:getFrameInfo(...))
         return
     end
+    local trail, onion = self._trail, self._onion
+    local tint, flash, blend, shader = self._color, self._flash, self._blend, self._shader
 
     local pr, pg, pb, pa = gfx.getColor()
     local cr, cg, cb, ca = pr, pg, pb, pa
@@ -1555,6 +1595,7 @@ end
 function Animation:setColor(r, g, b, a)
     if r == nil then
         self._color = nil
+        self._styled = nil
         return self
     end
     a = a == nil and 1 or a
@@ -1562,6 +1603,7 @@ function Animation:setColor(r, g, b, a)
         error('setColor: expected numeric r, g, b [, a] (0..1) or no arguments', 2)
     end
     self._color = { r, g, b, a }
+    self._styled = nil
     return self
 end
 
@@ -1571,6 +1613,7 @@ function Animation:setAlpha(a)
     if type(a) ~= 'number' then error('setAlpha: alpha must be a number (0..1)', 2) end
     local c = self._color
     if c then c[4] = a else self._color = { 1, 1, 1, a } end
+    self._styled = nil
     return self
 end
 
@@ -1580,6 +1623,7 @@ end
 function Animation:setBlendMode(mode, alphaMode)
     if mode ~= nil and type(mode) ~= 'string' then error('setBlendMode: blend mode must be a string or nil', 2) end
     self._blend = mode and { mode, alphaMode } or nil
+    self._styled = nil
     return self
 end
 
@@ -1590,6 +1634,7 @@ end
 function Animation:setShader(shader, uniforms)
     if uniforms ~= nil and type(uniforms) ~= 'table' then error('setShader: uniforms must be a table', 2) end
     self._shader   = shader
+    self._styled   = nil
     self._uniforms = shader and uniforms or nil
     return self
 end
@@ -1606,6 +1651,7 @@ function Animation:flash(seconds, r, g, b)
         error(('flash: seconds must be a positive number, got %s'):format(tostring(seconds)), 2)
     end
     self._flash = { left = seconds, r = r or 1, g = g or 1, b = b or 1 }
+    self._styled = nil
     self._plain = nil
     return self
 end
@@ -1638,6 +1684,7 @@ end
 function Animation:setPixelSnap(enabled)
     if type(enabled) ~= 'boolean' then error('setPixelSnap: expected a boolean', 2) end
     self._snap = enabled or nil
+    self._fancy = nil
     return self
 end
 
@@ -1651,6 +1698,7 @@ end
 function Animation:setTrail(count, spacing, alpha)
     if count == nil or count == 0 then
         self._trail = nil
+        self._styled = nil
         return self
     end
     spacing, alpha = spacing or 1, alpha or 0.5
@@ -1659,6 +1707,7 @@ function Animation:setTrail(count, spacing, alpha)
         error('setTrail: expected an integer count >= 1, an integer spacing >= 1 and an alpha in (0,1]', 2)
     end
     self._trail = { count = count, spacing = spacing, alpha = alpha, entries = {}, draws = 0 }
+    self._styled = nil
     return self
 end
 
@@ -1680,6 +1729,7 @@ function Animation:setOnion(before, after)
         error('setOnion: before and after must be non-negative integers', 2)
     end
     self._onion = (before > 0 or after > 0) and { before, after } or nil
+    self._styled = nil
     return self
 end
 
@@ -1945,6 +1995,7 @@ function Animation:clone()
     end
     c._flash    = nil
     c._plain    = nil
+    c._styled   = nil
     c._timer    = 0
     c._position = 1
     c._loops    = 0

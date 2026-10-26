@@ -2,6 +2,7 @@
 -- play mode) and random API call sequences that must keep the invariants.
 local env = ...
 local desAnim8, test, eq, near, grid, IMG, lcg = env.desAnim8, env.test, env.eq, env.near, env.grid, env.IMG, env.lcg
+local clearDraws, drawCalls, drawStates = env.clearDraws, env.drawCalls, env.drawStates
 
 -- Reference sequence: the frame order a play mode plays, written independently of
 -- the library.
@@ -178,6 +179,8 @@ test('fuzz: the plain-playback shortcut matches the general path', function()
         local mode = pick(modes)
         local a = desAnim8.newAnimation(frames, durations, mode)
         local b = desAnim8.newAnimation(frames, durations, mode)
+        local hits = { [a] = 0, [b] = 0 }
+        local function counter(x) return function() hits[x] = hits[x] + 1 end end
 
         local actions = {
             function(x, p) x:update(p * 0.2) end,
@@ -199,8 +202,10 @@ test('fuzz: the plain-playback shortcut matches the general path', function()
             function(x) x:setEasing(nil) end,
             function(x, p) x:setEasing(easings[1 + math.floor(p * #easings)]) end,
             function(x) x:flash(0.05) end,
-            function(x) x:onFrame(1, function() end) end,
-            function(x, p) x:addMarker(p * x:getDuration(), function() end) end,
+            function(x) x:onFrame(1, counter(x)) end,
+            function(x, p) x:addMarker(p * x:getDuration(), counter(x)) end,
+            function(x, p) x:addMarker(p * x:getDuration(), counter(x)) end,
+            function(x, p) x:addMarker(p * x:getDuration(), counter(x)) end,
             function(x) x:clearMarkers() end,
             function(x, p)
                 if x:getPlayMode() == 'loop' and x:getFrameCount() >= 2 then x:setLoopRange(1, 1 + math.floor(p * (x:getFrameCount() - 1))) end
@@ -222,6 +227,9 @@ test('fuzz: the plain-playback shortcut matches the general path', function()
             -- a short update right after: this is where the shortcut can be taken
             a:update(p * 0.03)
             b:update(p * 0.03)
+            b._plain = false
+            a:update(p * 0.03)
+            b:update(p * 0.03)
             if a._plain then shortcuts = shortcuts + 1 end
             b._plain = false
             label = ('round %d step %d action %d'):format(round, step, index)
@@ -229,7 +237,83 @@ test('fuzz: the plain-playback shortcut matches the general path', function()
             eq(a._timer, b._timer, label .. ': timer')
             eq(a.status, b.status, label .. ': status')
             eq(a._loops, b._loops, label .. ': loops')
+            eq(hits[a], hits[b], label .. ': callbacks fired')
         end
     end
     assert(shortcuts > 500, 'the shortcut was barely exercised: ' .. shortcuts)
+end)
+
+-- getFrameInfo and draw also have cached shortcuts (_fancy, _styled). B is forced
+-- onto the general paths; both must produce the same quads and draw calls.
+test('fuzz: the getFrameInfo and draw shortcuts match the general paths', function()
+    local rng = lcg()
+    local function chance(p) return rng() < p end
+    local function maybe(p, value) if chance(p) then return value end end
+    local shortcutDraws = 0
+    local shader = { send = function() end }
+
+    for round = 1, 200 do
+        local n = 2 + math.floor(rng() * 4)
+        local frames = desAnim8.newGrid(8, 8, 8 * 8, 8)('1-' .. n, 1)
+        local data = {}
+        for i = 1, n do
+            data[i] = {
+                trim = maybe(0.3, { x = math.floor(rng() * 3), y = math.floor(rng() * 3), w = 12, h = 12 }),
+                pivot = maybe(0.3, { x = math.floor(rng() * 8), y = math.floor(rng() * 8) }),
+                transform = maybe(0.3, { x = rng() * 4, y = rng() * 4, r = rng(), sx = 1 + rng() }),
+            }
+        end
+        local useData = chance(0.5)
+        local function make()
+            return desAnim8.new(IMG, frames, 0.1, 'loop', useData and { data = data } or nil)
+        end
+        local a, b = make(), make()
+
+        local actions = {
+            function(x, p) x:update(p * 0.15) end,
+            function(x) x:flipH() end,
+            function(x) x:flipV() end,
+            function(x, p) x:setPixelSnap(p < 0.5) end,
+            function(x, p) x:setAutoPivot(p < 0.5) end,
+            function(x, p) if p < 0.5 then x:setColor(1, 0.5, 0.5, p) else x:setColor(nil) end end,
+            function(x, p) x:setAlpha(p) end,
+            function(x, p) x:setBlendMode(p < 0.5 and 'add' or nil) end,
+            function(x, p) x:setShader(p < 0.5 and shader or nil) end,
+            function(x) x:flash(0.1) end,
+            function(x, p) x:setTrail(p < 0.5 and 2 or nil, 1, 0.5) end,
+            function(x, p) x:setOnion(p < 0.5 and 1 or 0, p < 0.5 and 1 or 0) end,
+            function(x, p) x:setInterpolation(p < 0.5) end,
+        }
+
+        for step = 1, 60 do
+            local index = 1 + math.floor(rng() * #actions)
+            local p = rng()
+            actions[index](a, p)
+            actions[index](b, p)
+            b._fancy, b._styled = true, true
+            local label = ('round %d step %d action %d'):format(round, step, index)
+
+            local args = { maybe(0.9, rng() * 100), maybe(0.9, rng() * 100), maybe(0.5, rng()), maybe(0.5, 1 + rng()),
+                maybe(0.3, 1 + rng()), maybe(0.5, rng() * 8), maybe(0.5, rng() * 8), maybe(0.2, rng()), maybe(0.2, rng()) }
+            local ia = { a:getFrameInfo(args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]) }
+            local ib = { b:getFrameInfo(args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]) }
+            for k = 1, 10 do eq(ia[k], ib[k], label .. ': getFrameInfo value ' .. k) end
+
+            clearDraws(); a:draw(args[1] or 0, args[2] or 0, args[3], args[4], args[5], args[6], args[7])
+            local drawsA, statesA = {}, {}
+            for i, call in ipairs(drawCalls) do drawsA[i], statesA[i] = call, drawStates[i] end
+            clearDraws(); b:draw(args[1] or 0, args[2] or 0, args[3], args[4], args[5], args[6], args[7])
+            eq(#drawCalls, #drawsA, label .. ': number of draw calls')
+            for i = 1, #drawsA do
+                local sa, sb = statesA[i], drawStates[i]
+                for k = 1, 4 do near(sa.color[k], sb.color[k], label .. (': draw %d color %d'):format(i, k)) end
+                eq(sa.blend, sb.blend, label .. ': blend')
+                eq(sa.shader, sb.shader, label .. ': shader')
+                for k = 1, 10 do eq(drawCalls[i][k], drawsA[i][k], label .. (': draw %d value %d'):format(i, k)) end
+            end
+            if a._styled == false and a._fancy == false then shortcutDraws = shortcutDraws + 1 end
+            b._fancy, b._styled = true, true
+        end
+    end
+    assert(shortcutDraws > 100, 'the shortcuts were barely exercised: ' .. shortcutDraws)
 end)

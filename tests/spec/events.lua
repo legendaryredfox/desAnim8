@@ -115,3 +115,93 @@ test('hooks reject non-function values and offFrame removes a single callback', 
     eq(table.concat(hits, ','), 'two')
     b:offFrame(3)   -- nothing registered: no error
 end)
+
+-- update takes a shortcut for plain playback once it has been warmed up. Each of
+-- these changes happens after the warm-up and must take effect immediately.
+local function warm(anim)
+    anim:update(0.01); anim:update(0.01)
+    return anim
+end
+
+test('plain shortcut: markers, frame callbacks and onStart added or reset after warm-up', function()
+    local a, fired = warm(four(0.1)), 0
+    a:addMarker(0.05, function() fired = fired + 1 end)
+    a:update(0.05)
+    eq(fired, 1, 'marker')
+
+    local b, entered = warm(four(0.1)), 0
+    b:onFrame(2, function() entered = entered + 1 end)
+    b:update(0.1)
+    eq(entered, 1, 'frame callback')
+
+    local c, starts = warm(four(0.1)), 0
+    c.onStart = function() starts = starts + 1 end
+    c:reset()
+    c:update(0.01)
+    eq(starts, 1, 'onStart after reset')
+    warm(c)
+    c:pauseAtStart(); c:resume(); c:update(0.01)
+    eq(starts, 2, 'onStart after pauseAtStart and resume')
+
+    local d, cleared = warm(four(0.1)), 0
+    d:addMarker(0.05, function() cleared = cleared + 1 end)
+    d:clearMarkers()
+    d:update(0.2)
+    eq(cleared, 0, 'cleared markers stay quiet')
+end)
+
+test('plain shortcut: speed, freeze, step, easing, loop range and flash set after warm-up', function()
+    local a = warm(four(0.1))
+    a:setSpeed(2); a:update(0.1)
+    eq(a.currentFrame, 3, 'speed')
+
+    local f = warm(four(0.1))
+    f:freeze(0.2); f:update(0.1)
+    eq(f.currentFrame, 1, 'freeze holds')
+    f:update(0.2)
+    eq(f.currentFrame, 2, 'freeze runs out and play resumes')
+    f:update(0.1); f:update(0.1)
+    eq(f.currentFrame, 4, 'and the shortcut works again afterwards')
+
+    local s = warm(four(0.1))
+    s:setStep(0.2); s:update(0.15)
+    eq(s.currentFrame, 1, 'step')
+
+    local e = warm(four(0.1))
+    e:setEasing('inQuad'); e:update(0.2)
+    eq(e.currentFrame, 2, 'easing')
+
+    local l = warm(four(0.1))
+    l:setLoopRange(2, 3)
+    l:update(0.35)
+    eq(l.currentFrame, 2, 'loop range wraps back to its start')
+
+    local fl = warm(four(0.1))
+    fl:setColor(0.2, 0.4, 0.6, 1)
+    fl:flash(0.1, 1, 1, 1)
+    clearDraws(); fl:draw(0, 0)
+    eq(drawStates[1].color[1], 1, 'flash is on')
+    for _ = 1, 5 do fl:update(0.03) end
+    clearDraws(); fl:draw(0, 0)
+    eq(drawStates[1].color[1], 0.2, 'and runs out through the shortcut path')
+end)
+
+test('plain shortcut: a state restore and a clone start from the right flags', function()
+    local a = warm(four(0.1))
+    a:setSpeed(2)
+    local state = a:getState()
+    local b = warm(four(0.1))
+    b:setState(state)
+    b:update(0.1)
+    eq(b.currentFrame, 3, 'restored speed applies')
+
+    local c = warm(four(0.1))
+    c:addMarker(0.05, function() end)
+    local d = c:clone()
+    local seen = 0
+    d._markers[1].fn = function() seen = seen + 1 end
+    warm(d)
+    d:reset()
+    d:update(0.06)
+    eq(seen, 1, 'the clone keeps its markers and does not use a stale shortcut')
+end)

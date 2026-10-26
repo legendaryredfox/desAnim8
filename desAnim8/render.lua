@@ -24,12 +24,20 @@ end
 -- of that it is a single love.graphics.draw call.
 local function drawFrame(self, image, ...)
     local gfx = love.graphics
-    local trail, onion = self._trail, self._onion
-    local tint, flash, blend, shader = self._color, self._flash, self._blend, self._shader
-    if not (tint or flash or blend or shader or trail or onion) then
+    -- _styled: any tint, flash, blend, shader, trail or onion is set. Cached; the
+    -- setters (and the flash running out) reset it to nil.
+    local styled = self._styled
+    if styled == nil then
+        styled = (self._color or self._flash or self._blend or self._shader or self._trail or self._onion)
+            and true or false
+        self._styled = styled
+    end
+    if not styled then
         gfx.draw(image, self:getFrameInfo(...))
         return
     end
+    local trail, onion = self._trail, self._onion
+    local tint, flash, blend, shader = self._color, self._flash, self._blend, self._shader
 
     local pr, pg, pb, pa = gfx.getColor()
     local cr, cg, cb, ca = pr, pg, pb, pa
@@ -131,6 +139,7 @@ end
 function Animation:setColor(r, g, b, a)
     if r == nil then
         self._color = nil
+        self._styled = nil
         return self
     end
     a = a == nil and 1 or a
@@ -138,6 +147,7 @@ function Animation:setColor(r, g, b, a)
         error('setColor: expected numeric r, g, b [, a] (0..1) or no arguments', 2)
     end
     self._color = { r, g, b, a }
+    self._styled = nil
     return self
 end
 
@@ -147,6 +157,7 @@ function Animation:setAlpha(a)
     if type(a) ~= 'number' then error('setAlpha: alpha must be a number (0..1)', 2) end
     local c = self._color
     if c then c[4] = a else self._color = { 1, 1, 1, a } end
+    self._styled = nil
     return self
 end
 
@@ -156,6 +167,7 @@ end
 function Animation:setBlendMode(mode, alphaMode)
     if mode ~= nil and type(mode) ~= 'string' then error('setBlendMode: blend mode must be a string or nil', 2) end
     self._blend = mode and { mode, alphaMode } or nil
+    self._styled = nil
     return self
 end
 
@@ -166,6 +178,7 @@ end
 function Animation:setShader(shader, uniforms)
     if uniforms ~= nil and type(uniforms) ~= 'table' then error('setShader: uniforms must be a table', 2) end
     self._shader   = shader
+    self._styled   = nil
     self._uniforms = shader and uniforms or nil
     return self
 end
@@ -182,6 +195,7 @@ function Animation:flash(seconds, r, g, b)
         error(('flash: seconds must be a positive number, got %s'):format(tostring(seconds)), 2)
     end
     self._flash = { left = seconds, r = r or 1, g = g or 1, b = b or 1 }
+    self._styled = nil
     self._plain = nil
     return self
 end
@@ -214,6 +228,7 @@ end
 function Animation:setPixelSnap(enabled)
     if type(enabled) ~= 'boolean' then error('setPixelSnap: expected a boolean', 2) end
     self._snap = enabled or nil
+    self._fancy = nil
     return self
 end
 
@@ -227,6 +242,7 @@ end
 function Animation:setTrail(count, spacing, alpha)
     if count == nil or count == 0 then
         self._trail = nil
+        self._styled = nil
         return self
     end
     spacing, alpha = spacing or 1, alpha or 0.5
@@ -235,6 +251,7 @@ function Animation:setTrail(count, spacing, alpha)
         error('setTrail: expected an integer count >= 1, an integer spacing >= 1 and an alpha in (0,1]', 2)
     end
     self._trail = { count = count, spacing = spacing, alpha = alpha, entries = {}, draws = 0 }
+    self._styled = nil
     return self
 end
 
@@ -256,6 +273,7 @@ function Animation:setOnion(before, after)
         error('setOnion: before and after must be non-negative integers', 2)
     end
     self._onion = (before > 0 or after > 0) and { before, after } or nil
+    self._styled = nil
     return self
 end
 

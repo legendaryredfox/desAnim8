@@ -32,7 +32,7 @@
 - Hooks run after the frame is updated, so `onLoop` sees the new `currentFrame`.
 - `getFrameInfo` applies trim and transform data; its flip math is unchanged for plain animations.
 - Supported runtimes: LuaJIT 2.1 and Lua 5.1 through 5.5; CI covers luajit, 5.1, 5.4 and 5.5.
-- `update` has a shortcut for plain forward playback, so it costs about the same as in 0.5.0 despite the new features.
+- `update`, `getFrameInfo` and `draw` have shortcuts for the plain case, so they cost about the same as in 0.5.0 despite the new features (checked on Lua 5.1 and 5.5; LuaJIT's trace compiler hides these costs).
 
 ## 0.5.0
 

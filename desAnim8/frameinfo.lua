@@ -58,6 +58,37 @@ end
 ---@return number? kx
 ---@return number? ky
 function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
+    local fh, fv = self.flippedH, self.flippedV
+    -- _fancy: some feature beyond a plain frame is configured (trim, transforms,
+    -- pixel snap, auto pivot). Cached; the setters reset it to nil.
+    local fancy = self._fancy
+    if fancy == nil then
+        fancy = (self._trim or self._transforms or self._snap or self._autoPivot) and true or false
+        self._fancy = fancy
+    end
+    if not fancy then
+        local frame = self.frames[self.currentFrame]
+        if not (fh or fv) then return frame, x, y, r, sx, sy, ox, oy, kx, ky end
+        -- flips only: the original, short formula
+        r,  sx = r or 0, sx or 1
+        sy     = sy or sx
+        ox, oy = ox or 0, oy or 0
+        kx, ky = kx or 0, ky or 0
+        local _, _, w, h = frame:getViewport()
+        if fh then
+            sx = -sx
+            ox = w - ox
+            kx = -kx
+            ky = -ky
+        end
+        if fv then
+            sy = -sy
+            oy = h - oy
+            kx = -kx
+            ky = -ky
+        end
+        return frame, x, y, r, sx, sy, ox, oy, kx, ky
+    end
     local f = self.currentFrame
     local frame = self.frames[f]
     local trim = self._trim and self._trim[f]
@@ -73,7 +104,6 @@ function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
             if oy == nil then oy = pivot.y end
         end
     end
-    local fh, fv = self.flippedH, self.flippedV
     local dx, dy, dr, tsx, tsy
     if self._transforms then dx, dy, dr, tsx, tsy = frameTransform(self, f) end
     if fh or fv or trim or dx then
@@ -136,6 +166,7 @@ end
 function Animation:setAutoPivot(enabled)
     if type(enabled) ~= 'boolean' then error('setAutoPivot: expected a boolean', 2) end
     self._autoPivot = enabled
+    self._fancy = nil
     return self
 end
 
