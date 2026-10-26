@@ -252,8 +252,11 @@ function Animation:gotoFrame(n)
     for i, fi in ipairs(self._seq) do
         if fi == n then
             self._position    = i
-            self._timer       = timerFor(self, self._intervals[i])
+            self._timer       = timerFor(self, i)
             self.currentFrame = n
+            -- with setStep a frame shorter than the step cannot be shown: keep
+            -- the displayed frame consistent with the timer
+            if self._step or self._ease then locate(self) end
             return
         end
     end

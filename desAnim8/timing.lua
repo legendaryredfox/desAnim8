@@ -181,8 +181,9 @@ local function locate(self)
     self.currentFrame = self._seq[self._position]
 end
 
--- Smallest timer whose displayed time reaches `target` (inverse of the easing).
-local function timerFor(self, target)
+-- Timer whose eased display time reaches `target`: the inverse of the easing,
+-- found by bisection, which works because easings never decrease.
+local function timerForDisplay(self, target)
     local ease, total = self._ease, self._totalDuration
     if not ease or target <= 0 then return target end
     if target >= total then return total end
@@ -192,6 +193,21 @@ local function timerFor(self, target)
         if ease(mid / total) * total >= target then hi = mid else lo = mid end
     end
     return hi
+end
+
+-- Timer that displays sequence `position`: its start time, nudged to the first
+-- instant the step lets through and mapped back through the easing.
+local function timerFor(self, position)
+    local intervals = self._intervals
+    local target = intervals[position]
+    local step = self._step
+    if step then
+        -- a frame shorter than the step may have no displayable instant, in which
+        -- case its start time is kept
+        local snapped = math.ceil(target / step - 1e-9) * step
+        if snapped < intervals[position + 1] then target = snapped end
+    end
+    return timerForDisplay(self, target)
 end
 
 local EASINGS = {
@@ -283,6 +299,7 @@ return {
     displayTime         = displayTime,
     locate              = locate,
     timerFor            = timerFor,
+    timerForDisplay     = timerForDisplay,
     resolveEasing       = resolveEasing,
     neighbourPosition   = neighbourPosition,
     frameProgress       = frameProgress,

@@ -8,6 +8,7 @@ local isInteger = util.isInteger
 local VALID_MODES, MODE_LIST = timing.VALID_MODES, timing.MODE_LIST
 local parseDurations, applyTiming, applySequence = timing.parseDurations, timing.applyTiming, timing.applySequence
 local applyRegion, locate, resolveEasing = timing.applyRegion, timing.locate, timing.resolveEasing
+local displayTime, timerFor, timerForDisplay = timing.displayTime, timing.timerFor, timing.timerForDisplay
 local assertTickDurations = options.assertTickDurations
 
 ---@class desAnim8.Animation
@@ -116,8 +117,9 @@ function Animation:setPlayMode(mode)
         if seq[i] == frame then found = i; break end
     end
     self._position    = found
-    self._timer       = self._intervals[found]
+    self._timer       = timerFor(self, found)
     self.currentFrame = seq[found]
+    if self._step or self._ease then locate(self) end
     return self
 end
 
@@ -130,11 +132,14 @@ function Animation:setDurations(durations)
     if self._ticks then assertTickDurations(fresh, 3) end
     local pos = self._position
     local lo, hi = self._intervals[pos], self._intervals[pos + 1]
-    local progress = (self._timer - lo) / (hi - lo)
+    -- progress is measured on the displayed time, which differs from the timer
+    -- while an easing or a step is active
+    local progress = (displayTime(self) - lo) / (hi - lo)
+    progress = progress < 0 and 0 or progress > 1 and 1 or progress
     self._baseDurations, self._durations = fresh, fresh
     applySequence(self, self._seq)
-    local timer = self._intervals[pos] + progress * (self._intervals[pos + 1] - self._intervals[pos])
-    self._timer = math.min(timer, self._totalDuration)
+    local lo2, hi2 = self._intervals[pos], self._intervals[pos + 1]
+    self._timer = math.min(timerForDisplay(self, lo2 + progress * (hi2 - lo2)), self._totalDuration)
     locate(self)
     return self
 end

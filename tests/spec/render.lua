@@ -1,0 +1,175 @@
+-- Drawing and render style: tint, blend, shader, flash, facing, trail, onion skin and debug helpers.
+local env = ...
+local desAnim8, test, eq, near, throws, seqString, IMG, grid, four, drawCalls, drawStates, gfxLog, gstate, fakeBatch, lcg, withTimeScale, span, framesWith, viewportXs, ASE, fakeImageData, resetGfx, countLog, clearDraws = env.desAnim8, env.test, env.eq, env.near, env.throws, env.seqString, env.IMG, env.grid, env.four, env.drawCalls, env.drawStates, env.gfxLog, env.gstate, env.fakeBatch, env.lcg, env.withTimeScale, env.span, env.framesWith, env.viewportXs, env.ASE, env.fakeImageData, env.resetGfx, env.countLog, env.clearDraws
+
+test('draw: bound image', function()
+    clearDraws()
+    local a = four()
+    a:draw(5, 6, 0, 2, 2)
+    local c = drawCalls[1]
+    eq(c[1], IMG); eq(c[2], a.frames[1]); eq(c[3], 5); eq(c[4], 6); eq(c[6], 2)
+end)
+
+test('draw: image-less animation takes the image first', function()
+    clearDraws()
+    local a = desAnim8.newAnimation(grid()('1-4', 1), 0.1)
+    a:draw(IMG, 5, 6, 0, 2, 2)
+    local c = drawCalls[1]
+    eq(c[1], IMG); eq(c[3], 5); eq(c[4], 6); eq(c[6], 2)
+    a:draw(IMG, 1, 1)
+    eq(#drawCalls, 2)
+end)
+
+test('draw: wrong argument shape gives a clear error', function()
+    local bound = four()
+    local free = desAnim8.newAnimation(grid()('1-4', 1), 0.1)
+    throws(function() bound:draw(IMG, 5, 6) end, 'image bound')
+    throws(function() free:draw(5, 6) end, 'no image')
+    throws(function() free:draw() end, 'no image')
+end)
+
+test('draw without styling touches no graphics state', function()
+    resetGfx()
+    four(0.1):draw(0, 0)
+    eq(#drawCalls, 1); eq(#gfxLog, 0)
+end)
+
+test('color and alpha apply during draw and are restored', function()
+    resetGfx()
+    local a = four(0.1)
+    eq(a:setColor(1, 0, 0, 0.5), a, 'chainable')
+    a:draw(0, 0)
+    eq(drawStates[1].color[2], 0); eq(drawStates[1].color[4], 0.5)
+    eq(gstate.color[2], 1, 'previous color restored')
+    a:setColor(nil)
+    resetGfx(); a:draw(0, 0); eq(#gfxLog, 0)
+    a:setAlpha(0.25)
+    resetGfx(); a:draw(0, 0)
+    eq(drawStates[1].color[1], 1); eq(drawStates[1].color[4], 0.25)
+    throws(function() a:setColor('x', 0, 0) end, 'setColor')
+    throws(function() a:setAlpha(nil) end, 'alpha')
+end)
+
+test('blend mode and shader apply during draw and are restored', function()
+    resetGfx()
+    local sent = {}
+    local shader = { send = function(_, name, value) sent[name] = value end }
+    local a = four(0.1)
+    a:setBlendMode('add'):setShader(shader, { amount = 0.5 })
+    a:draw(0, 0)
+    eq(drawStates[1].blend, 'add'); eq(drawStates[1].shader, shader); eq(sent.amount, 0.5)
+    eq(gstate.blend, 'alpha'); eq(gstate.shader, nil)
+    a:setBlendMode(nil):setShader(nil)
+    resetGfx(); a:draw(0, 0); eq(#gfxLog, 0)
+    throws(function() a:setBlendMode(5) end, 'blend')
+end)
+
+test('flash overrides the tint for a while', function()
+    resetGfx()
+    local a = four(0.1)
+    a:setColor(0.2, 0.4, 0.6, 0.8)
+    a:flash(0.2, 1, 1, 1)
+    a:draw(0, 0)
+    eq(drawStates[1].color[1], 1); eq(drawStates[1].color[4], 0.8, 'alpha kept')
+    a:update(0.1); resetGfx(); a:draw(0, 0); eq(drawStates[1].color[1], 1)
+    a:update(0.2); resetGfx(); a:draw(0, 0); eq(drawStates[1].color[1], 0.2, 'flash expired')
+    a:pause(); a:flash(0.1); a:update(0.2)
+    resetGfx(); a:draw(0, 0); eq(drawStates[1].color[1], 0.2, 'flash runs out while paused')
+    throws(function() a:flash(0) end, 'flash')
+end)
+
+test('faceTowards and default facing', function()
+    local a = four(0.1)
+    eq(a:faceTowards(-3), a, 'chainable')
+    eq(a.flippedH, true)
+    a:faceTowards(0); eq(a.flippedH, true)
+    a:faceTowards(2); eq(a.flippedH, false)
+    a:setDefaultFacing(-1)
+    a:faceTowards(2); eq(a.flippedH, true)
+    a:faceTowards(-2); eq(a.flippedH, false)
+    throws(function() a:faceTowards('x') end, 'faceTowards')
+    throws(function() a:setDefaultFacing(0) end, 'facing')
+end)
+
+test('trail draws fading ghosts of earlier draws', function()
+    resetGfx()
+    local a = four(0.1)
+    a:setTrail(3, 1, 0.6)
+    for i = 1, 5 do a:draw(i, 0); a:update(0.1) end
+    local trail = a:getTrail()
+    eq(#trail, 3)
+    eq(trail[1][2], 3); eq(trail[3][2], 5)
+    resetGfx()
+    a:draw(6, 0)
+    eq(#drawCalls, 4, 'three ghosts and the sprite')
+    eq(drawCalls[1][3], 3, 'oldest first')
+    near(drawStates[1].color[4], 0.15); near(drawStates[2].color[4], 0.3); near(drawStates[3].color[4], 0.45)
+    eq(drawStates[4].color[4], 1)
+    eq(gstate.color[4], 1)
+    a:setTrail(nil); eq(#a:getTrail(), 0)
+    resetGfx(); a:draw(0, 0); eq(#drawCalls, 1)
+    local s = four(0.1); s:setTrail(5, 2, 0.5)
+    for i = 1, 6 do s:draw(i, 0) end
+    eq(#s:getTrail(), 3, 'recorded every second draw')
+    throws(function() a:setTrail(0.5) end, 'setTrail')
+end)
+
+test('onion skin draws neighbouring frames first', function()
+    resetGfx()
+    local a = four(0.1)
+    a:update(0.1)
+    a:setOnion(1, 1)
+    a:draw(0, 0)
+    eq(#drawCalls, 3)
+    eq(drawCalls[1][2], a.frames[1]); eq(drawCalls[2][2], a.frames[3]); eq(drawCalls[3][2], a.frames[2])
+    assert(drawStates[1].color[1] > drawStates[1].color[2], 'previous frame tinted red')
+    assert(drawStates[2].color[2] > drawStates[2].color[1], 'next frame tinted green')
+    eq(a.currentFrame, 2, 'current frame untouched')
+    resetGfx(); a:reset(); a:draw(0, 0)
+    eq(drawCalls[1][2], a.frames[4], 'loop wraps to the last frame')
+    local o = four(0.1, 'once')
+    resetGfx(); o:setOnion(1, 0); o:draw(0, 0); eq(#drawCalls, 1, 'once does not wrap')
+    a:setOnion(nil); resetGfx(); a:draw(0, 0); eq(#drawCalls, 1)
+    throws(function() a:setOnion(-1, 0) end, 'setOnion')
+end)
+
+test('drawBounds outlines the transformed frame', function()
+    resetGfx()
+    local a = four(0.1)
+    a:drawBounds(10, 20, 0, 2, 2, 4, 5)
+    local names = {}
+    for _, e in ipairs(gfxLog) do names[#names + 1] = e[1] end
+    eq(names[1], 'push'); eq(names[#names], 'pop')
+    local rect
+    for _, e in ipairs(gfxLog) do
+        if e[1] == 'translate' and e[2] == 10 then eq(e[3], 20) end
+        if e[1] == 'scale' then eq(e[2], 2) end
+        if e[1] == 'rectangle' then rect = e end
+    end
+    eq(rect[2], 'line'); eq(rect[5], 16); eq(rect[6], 16)
+    resetGfx(); a:flipH(); a:drawBounds(0, 0)
+    for _, e in ipairs(gfxLog) do if e[1] == 'scale' then eq(e[2], -1) end end
+end)
+
+test('debug timeline draws segments and scrubs', function()
+    resetGfx()
+    local a = four(0.1)
+    a:update(0.15)
+    desAnim8.debug.drawTimeline(a, 10, 10, 100, 10)
+    assert(countLog('rectangle') >= 5, 'one segment per position plus the outline')
+    eq(countLog('line'), 1)
+    eq(gstate.color[1], 1, 'color restored')
+    eq(desAnim8.debug.scrub(a, 60, 15, 10, 10, 100, 10), true)
+    near(a:getPhase(), 0.5); eq(a.status, 'paused')
+    a:resume()
+    eq(desAnim8.debug.scrub(a, 500, 15, 10, 10, 100, 10), false)
+    eq(a.status, 'playing')
+end)
+
+test('shader sources are plain strings', function()
+    for _, name in ipairs({ 'whiteFlash', 'paletteSwap', 'outline' }) do
+        local src = desAnim8.shaders[name]
+        eq(type(src), 'string', name)
+        assert(src:find('vec4 effect'), name .. ' defines effect')
+    end
+end)

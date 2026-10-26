@@ -21,6 +21,9 @@
 - `getState`/`setState` for saving and restoring playback.
 - LuaCATS annotations, a rockspec, `.luacheckrc`, `examples/showcase`, `tests/bench.lua`, and the README in Brazilian Portuguese and English.
 
+### Fixed
+- `setPlayMode` and `setDurations` left `currentFrame` out of step with the timer while an easing or `setStep` was active, so the frame jumped on the next `update`. `gotoFrame` also honours `setStep` now.
+
 ### Changed
 - The library is split into modules under `desAnim8/` behind a thin `desAnim8.lua` entry; `require 'desAnim8'` is unchanged. `lua tools/bundle.lua` builds the single-file `dist/desAnim8.lua` for consoles, and CI keeps it current and tested.
 - `resume()` on a looping animation parked by `pauseAtEnd` starts over instead of refiring `onLoop`.

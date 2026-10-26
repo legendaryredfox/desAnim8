@@ -281,8 +281,9 @@ local function locate(self)
     self.currentFrame = self._seq[self._position]
 end
 
--- Smallest timer whose displayed time reaches `target` (inverse of the easing).
-local function timerFor(self, target)
+-- Timer whose eased display time reaches `target`: the inverse of the easing,
+-- found by bisection, which works because easings never decrease.
+local function timerForDisplay(self, target)
     local ease, total = self._ease, self._totalDuration
     if not ease or target <= 0 then return target end
     if target >= total then return total end
@@ -292,6 +293,21 @@ local function timerFor(self, target)
         if ease(mid / total) * total >= target then hi = mid else lo = mid end
     end
     return hi
+end
+
+-- Timer that displays sequence `position`: its start time, nudged to the first
+-- instant the step lets through and mapped back through the easing.
+local function timerFor(self, position)
+    local intervals = self._intervals
+    local target = intervals[position]
+    local step = self._step
+    if step then
+        -- a frame shorter than the step may have no displayable instant, in which
+        -- case its start time is kept
+        local snapped = math.ceil(target / step - 1e-9) * step
+        if snapped < intervals[position + 1] then target = snapped end
+    end
+    return timerForDisplay(self, target)
 end
 
 local EASINGS = {
@@ -383,6 +399,7 @@ return {
     displayTime         = displayTime,
     locate              = locate,
     timerFor            = timerFor,
+    timerForDisplay     = timerForDisplay,
     resolveEasing       = resolveEasing,
     neighbourPosition   = neighbourPosition,
     frameProgress       = frameProgress,
@@ -906,8 +923,11 @@ function Animation:gotoFrame(n)
     for i, fi in ipairs(self._seq) do
         if fi == n then
             self._position    = i
-            self._timer       = timerFor(self, self._intervals[i])
+            self._timer       = timerFor(self, i)
             self.currentFrame = n
+            -- with setStep a frame shorter than the step cannot be shown: keep
+            -- the displayed frame consistent with the timer
+            if self._step or self._ease then locate(self) end
             return
         end
     end
@@ -937,6 +957,7 @@ local isInteger = util.isInteger
 local VALID_MODES, MODE_LIST = timing.VALID_MODES, timing.MODE_LIST
 local parseDurations, applyTiming, applySequence = timing.parseDurations, timing.applyTiming, timing.applySequence
 local applyRegion, locate, resolveEasing = timing.applyRegion, timing.locate, timing.resolveEasing
+local displayTime, timerFor, timerForDisplay = timing.displayTime, timing.timerFor, timing.timerForDisplay
 local assertTickDurations = options.assertTickDurations
 
 ---@class desAnim8.Animation
@@ -1045,8 +1066,9 @@ function Animation:setPlayMode(mode)
         if seq[i] == frame then found = i; break end
     end
     self._position    = found
-    self._timer       = self._intervals[found]
+    self._timer       = timerFor(self, found)
     self.currentFrame = seq[found]
+    if self._step or self._ease then locate(self) end
     return self
 end
 
@@ -1059,11 +1081,14 @@ function Animation:setDurations(durations)
     if self._ticks then assertTickDurations(fresh, 3) end
     local pos = self._position
     local lo, hi = self._intervals[pos], self._intervals[pos + 1]
-    local progress = (self._timer - lo) / (hi - lo)
+    -- progress is measured on the displayed time, which differs from the timer
+    -- while an easing or a step is active
+    local progress = (displayTime(self) - lo) / (hi - lo)
+    progress = progress < 0 and 0 or progress > 1 and 1 or progress
     self._baseDurations, self._durations = fresh, fresh
     applySequence(self, self._seq)
-    local timer = self._intervals[pos] + progress * (self._intervals[pos + 1] - self._intervals[pos])
-    self._timer = math.min(timer, self._totalDuration)
+    local lo2, hi2 = self._intervals[pos], self._intervals[pos + 1]
+    self._timer = math.min(timerForDisplay(self, lo2 + progress * (hi2 - lo2)), self._totalDuration)
     locate(self)
     return self
 end
