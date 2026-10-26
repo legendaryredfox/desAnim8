@@ -65,7 +65,8 @@ local function fireMarkers(self, oldT, newT, loops, reversed)
     local wstart, wend = self._wrapStart, self._wrapEnd
     for i = 1, #ms do
         local m = ms[i]
-        local t, hit = m.t, false
+        local t = m.t
+        local hit
         if not reversed then
             if loops == 0 then hit = t > oldT and t <= newT
             else hit = (t > oldT and t <= wend) or (t >= wstart and t <= newT) end

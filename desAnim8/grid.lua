@@ -113,7 +113,7 @@ function Grid:getFrames(...)
     end
     if #frames == 0 then error('getFrames: no frames selected', 2) end
     local copy = {}
-    for i = 1, #frames do copy[i] = frames[i] end
+    for n = 1, #frames do copy[n] = frames[n] end
     self._cache[key] = copy
     return frames
 end

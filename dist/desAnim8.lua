@@ -570,7 +570,8 @@ local function fireMarkers(self, oldT, newT, loops, reversed)
     local wstart, wend = self._wrapStart, self._wrapEnd
     for i = 1, #ms do
         local m = ms[i]
-        local t, hit = m.t, false
+        local t = m.t
+        local hit
         if not reversed then
             if loops == 0 then hit = t > oldT and t <= newT
             else hit = (t > oldT and t <= wend) or (t >= wstart and t <= newT) end
@@ -1363,7 +1364,7 @@ local util = require(PKG .. '.util')
 local timing = require(PKG .. '.timing')
 local dbg = require(PKG .. '.debug')
 local isInteger, flipFor = util.isInteger, util.flipFor
-local PAUSE_AT_END, neighbourPosition = timing.PAUSE_AT_END, timing.neighbourPosition
+local neighbourPosition = timing.neighbourPosition
 
 ---@class desAnim8.Animation
 local Animation = {}
@@ -2017,7 +2018,7 @@ function Grid:getFrames(...)
     end
     if #frames == 0 then error('getFrames: no frames selected', 2) end
     local copy = {}
-    for i = 1, #frames do copy[i] = frames[i] end
+    for n = 1, #frames do copy[n] = frames[n] end
     self._cache[key] = copy
     return frames
 end

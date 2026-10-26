@@ -53,7 +53,7 @@ function love.load()
     hero:setPixelSnap(true)
 
     crowd = desAnim8.newBatch(image, grid('1-6', 2), 0.07, 'loop', 400)
-    for i = 1, 200 do crowd:add(math.random(0, 600), math.random(40, 330), 0, 1, 1) end
+    for _ = 1, 200 do crowd:add(math.random(0, 600), math.random(40, 330), 0, 1, 1) end
     crowd:randomizePhases()
 end
 
@@ -114,5 +114,5 @@ function love.draw()
 
     love.graphics.print(('clip %s  frame %d  phase %.2f  run ticks %d  fps %d'):format(
         select(2, hero:getCurrent()), hero:getCurrentFrameNumber(), hero:getPhase(), tick, love.timer.getFPS()), 10, 10)
-    for i, line in ipairs(log) do love.graphics.print(line, 10, 10 + 16 * i) end
+    for row, line in ipairs(log) do love.graphics.print(line, 10, 10 + 16 * row) end
 end

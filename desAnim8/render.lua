@@ -5,7 +5,7 @@ local util = require(PKG .. '.util')
 local timing = require(PKG .. '.timing')
 local dbg = require(PKG .. '.debug')
 local isInteger, flipFor = util.isInteger, util.flipFor
-local PAUSE_AT_END, neighbourPosition = timing.PAUSE_AT_END, timing.neighbourPosition
+local neighbourPosition = timing.neighbourPosition
 
 ---@class desAnim8.Animation
 local Animation = {}
