@@ -2694,12 +2694,27 @@ function Set:queue(name)
     return self
 end
 
+-- Declares that `name` hands over to `nextName` whenever it finishes (once modes)
+-- or completes a loop, unless another clip was queued. nil clears the rule.
+---@param name string
+---@param nextName string?
+---@return desAnim8.Set
+function Set:setNext(name, nextName)
+    if not self._clips[name] then error(('setNext: unknown clip %q'):format(tostring(name)), 2) end
+    if nextName ~= nil and not self._clips[nextName] then
+        error(('setNext: unknown clip %q'):format(tostring(nextName)), 2)
+    end
+    self._next = self._next or {}
+    self._next[name] = nextName
+    return self
+end
+
 ---@param dt number
 function Set:update(dt)
     local clip = self._cur
     local loops = clip._loops
     clip:update(dt)
-    local queued = self._queued
+    local queued = self._queued or (self._next and self._next[self._name])
     if queued and (clip._loops > loops or clip:isFinished()) then self:play(queued) end
 end
 

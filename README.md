@@ -428,6 +428,7 @@ local hero = desAnim8.newSet({ idle = idle, run = run, hit = hit }, 'idle')
 hero:play('run')                              -- o clip novo começa do início
 hero:play('run', { keepPhase = true })        -- mantém a fase (andar para correr sem engasgar)
 hero:play('hit'):queue('idle')                -- volta para idle quando hit termina (ou no próximo loop de um clip em loop)
+hero:setNext('hit', 'idle')                   -- regra fixa: sempre que hit terminar, vai para idle (queue tem prioridade)
 hero.onChange = function(set, from, to) end
 
 hero:update(dt)   hero:draw(x, y)   hero:faceTowards(vx)
@@ -1073,6 +1074,7 @@ local hero = desAnim8.newSet({ idle = idle, run = run, hit = hit }, 'idle')
 hero:play('run')                              -- the new clip starts over
 hero:play('run', { keepPhase = true })        -- keeps the phase (walk to run without a stutter)
 hero:play('hit'):queue('idle')                -- back to idle when hit finishes (or at the next wrap of a looping clip)
+hero:setNext('hit', 'idle')                   -- standing rule: whenever hit finishes, go to idle (queue wins)
 hero.onChange = function(set, from, to) end
 
 hero:update(dt)   hero:draw(x, y)   hero:faceTowards(vx)

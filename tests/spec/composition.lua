@@ -242,3 +242,30 @@ test('watcher: the default stat reads love.filesystem.getInfo', function()
     love.filesystem = real
     if not ok then error(err, 0) end
 end)
+
+test('set: setNext hands a clip over to another by itself', function()
+    local idle, hit, run = four(0.1), four(0.05, 'once'), four(0.05)
+    local set = desAnim8.newSet({ idle = idle, hit = hit, run = run }, 'idle')
+    eq(set:setNext('hit', 'idle'), set, 'chainable')
+    local changes = {}
+    set.onChange = function(_, from, to) changes[#changes + 1] = from .. '>' .. to end
+
+    set:play('hit')
+    set:update(0.1); eq(select(2, set:getCurrent()), 'hit', 'still playing')
+    set:update(0.2); eq(select(2, set:getCurrent()), 'idle', 'finished: hands over')
+    eq(table.concat(changes, ','), 'idle>hit,hit>idle')
+
+    set:play('hit'):queue('run')
+    set:update(0.3); eq(select(2, set:getCurrent()), 'run', 'an explicit queue wins')
+
+    set:setNext('run', 'idle')
+    set:update(0.1); eq(select(2, set:getCurrent()), 'run', 'mid loop: still running')
+    set:update(0.15); eq(select(2, set:getCurrent()), 'idle', 'a looping clip hands over after one loop')
+
+    set:setNext('hit', nil)
+    set:play('hit'); set:update(0.5)
+    eq(select(2, set:getCurrent()), 'hit', 'cleared: stays on the finished clip')
+
+    throws(function() set:setNext('zz', 'idle') end, 'unknown clip')
+    throws(function() set:setNext('hit', 'zz') end, 'unknown clip')
+end)
