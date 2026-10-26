@@ -2,3 +2,5 @@ last_session.txt
 CODE_REVIEW.md
 
 FIX_PLAN.md
+luacov.stats.out
+luacov.report.out

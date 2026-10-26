@@ -57,3 +57,19 @@ test('state: speed, freeze, started, released and random order round trip', func
     local plain = four(0.1)
     throws(function() plain:setState(lr:getState()) end, 'released')
 end)
+
+test('state: rejects a bad random order, speed and freeze', function()
+    local q = grid()('1-4', 1)
+    local r = desAnim8.newAnimation(q, 0.1, 'random', { rng = lcg() })
+    local s = r:getState()
+    s.seq = { 9 }
+    throws(function() r:setState(s) end, 'seq entry')
+    s.seq = {}
+    throws(function() r:setState(s) end, 'seq list')
+
+    local a = four(0.1)
+    local function with(k, v) local t = a:getState(); t[k] = v; return t end
+    throws(function() a:setState(with('speed', 'x')) end, 'speed')
+    throws(function() a:setState(with('freeze', -1)) end, 'freeze')
+    a:setState(with('speed', nil)); eq(a:getSpeed(), 1, 'old states without a speed still load')
+end)

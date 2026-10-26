@@ -1,0 +1,4 @@
+-- Coverage of the library only:  luajit -lluacov tests/run.lua && luacov
+statsfile = 'luacov.stats.out'
+reportfile = 'luacov.report.out'
+include = { 'desAnim8$', 'desAnim8/' }

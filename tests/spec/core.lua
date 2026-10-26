@@ -27,3 +27,15 @@ test('clone: independent state, shared immutable data, copied flip and onLoop', 
     c:flipH()
     eq(a.flippedH, true); eq(c.flippedH, false)
 end)
+
+test('clone keeps the trail settings but starts without ghosts', function()
+    local a = four(0.1)
+    a:setTrail(3, 2, 0.4)
+    clearDraws()
+    a:draw(1, 1); a:draw(2, 2); a:draw(3, 3)
+    assert(#a:getTrail() > 0)
+    local c = a:clone()
+    eq(#c:getTrail(), 0)
+    for i = 1, 6 do c:draw(i, i) end
+    eq(#c:getTrail(), 3, 'the clone records with the same count')
+end)

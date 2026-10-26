@@ -99,3 +99,19 @@ test('onStart fires on the first advancing update, onEnd when a once finishes', 
     l:update(1); l:update(1)
     eq(starts, 1, 'not on loop wraps')
 end)
+
+test('hooks reject non-function values and offFrame removes a single callback', function()
+    local a = four(0.1)
+    a.onLoop = 5
+    throws(function() a:update(1) end, 'onLoop')
+
+    local hits = {}
+    local b = four(0.1)
+    local function one() hits[#hits + 1] = 'one' end
+    local function two() hits[#hits + 1] = 'two' end
+    b:onFrame(2, one); b:onFrame(2, two)
+    b:offFrame(2, one)
+    b:update(0.1)
+    eq(table.concat(hits, ','), 'two')
+    b:offFrame(3)   -- nothing registered: no error
+end)

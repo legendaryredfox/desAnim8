@@ -182,3 +182,17 @@ test('keyframe transforms: stepped, interpolated, mirrored by flips', function()
     near(ox, 0, 'frame 4 has no transform and blends to frame 1')
     throws(function() desAnim8.newAnimation(grid()('1-4', 1), 0.1, 'loop', { data = { [1] = { transform = { x = 'a' } } } }) end, 'transform')
 end)
+
+test('getWorldRect honours the auto pivot and trimmed frames', function()
+    local quads, data = desAnim8.newFramesFromRecords(
+        { { x = 0, y = 0, w = 8, h = 8, trimX = 2, trimY = 0, sourceW = 16, sourceH = 16 } }, 64, 16)
+    data[1].hitbox = { x = 4, y = 0, w = 4, h = 4 }
+    data[1].pivot = { x = 8, y = 8 }
+    local a = desAnim8.newAnimation(quads, 1, 'loop', { data = data })
+    a:setAutoPivot(true)
+    local x, y, w, h = a:getWorldRect('hitbox', 100, 50)
+    eq(x, 96); eq(y, 42); eq(w, 4); eq(h, 4)
+    a:flipH()
+    x = a:getWorldRect('hitbox', 100, 50)
+    eq(x, 100, 'mirrored inside the 16 wide source frame')
+end)

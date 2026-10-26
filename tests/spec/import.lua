@@ -87,3 +87,27 @@ test('sliceByAlpha finds blobs, merges close ones and orders row-major', functio
     local x, y, w, h = quads[1]:getViewport()
     eq(x, 2); eq(w, 6)
 end)
+
+test('aseprite and atlas: size fallback, bad tags, passthrough options, bad input', function()
+    local noSize = { frames = ASE.frames, meta = { frameTags = ASE.meta.frameTags } }
+    throws(function() desAnim8.newFromAseprite(noSize, IMG, 'idle') end, 'meta.size')
+    local sized = { getDimensions = function() return 64, 16 end }
+    eq(desAnim8.newFromAseprite(noSize, sized, 'idle'):getFrameCount(), 2, 'size comes from the image')
+
+    local function withTag(tag)
+        return { frames = ASE.frames, meta = { size = ASE.meta.size, frameTags = { tag } } }
+    end
+    throws(function() desAnim8.newFromAseprite(withTag({ name = 'x', from = 2, to = 9, direction = 'forward' }), IMG, 'x') end, 'invalid frame range')
+    throws(function() desAnim8.newFromAseprite(withTag({ name = 'x', from = 0, to = 1, direction = 'sideways' }), IMG, 'x') end, 'direction')
+
+    local jittered = desAnim8.newFromAseprite(ASE, IMG, 'idle', { jitter = 0.5, rng = function() return 1 end })
+    near(jittered:getDuration(), 0.45, 'constructor options pass through')
+    throws(function() desAnim8.newFromAseprite(ASE, IMG, 'idle', { data = {} }) end, 'opts.data')
+
+    eq(#desAnim8.atlas.fromAseprite(ASE), 4)
+    throws(function() desAnim8.atlas.fromAseprite(5) end, 'frames list')
+    throws(function() desAnim8.atlas.fromAseprite({ frames = {}, meta = {} }) end, 'no frames')
+    throws(function() desAnim8.atlas.fromTexturePacker(5) end, 'frames list')
+    throws(function() desAnim8.atlas.fromStarling({}) end, 'non%-empty')
+    throws(function() desAnim8.newFramesFromRecords({ { x = 'a', y = 0, w = 1, h = 1 } }, 8, 8) end, 'numeric')
+end)

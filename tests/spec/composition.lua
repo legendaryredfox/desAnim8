@@ -153,3 +153,92 @@ test('watcher reports modification time changes', function()
     eq(w:poll(), true)
     throws(function() desAnim8.newWatcher('x', 'nope') end, 'function')
 end)
+
+test('composite: shared controls, flips, facing, image-less layers and bad layers', function()
+    local body, weapon = four(0.1), four(0.2)
+    local c = desAnim8.newComposite({ { anim = body }, { anim = weapon } })
+    eq(c:getLayer(2), weapon); eq(c:getLayer(5), nil)
+    eq(c:setFlipV(true), c); eq(body.flippedV, true); eq(weapon.flippedV, true); eq(c.flippedV, true)
+    c:flipV(); eq(weapon.flippedV, false)
+    c:faceTowards(-1); eq(body.flippedH, true)
+    c:faceTowards(1); eq(body.flippedH, false)
+    c:faceTowards(0); eq(body.flippedH, false)
+    throws(function() c:faceTowards('x') end, 'faceTowards')
+    c:setPhase(0.5); near(c:getPhase(), 0.5); near(weapon:getPhase(), 0.5)
+    c:pause(); eq(c:isPlaying(), false); eq(weapon:isPaused(), true)
+    c:resume(); eq(c:isPlaying(), true)
+    c:pauseAtEnd(); eq(body.currentFrame, 4)
+    c:pauseAtStart(); eq(body.currentFrame, 1)
+    c:reset(); c:stop()
+    throws(function() desAnim8.newComposite({ {} }) end, 'needs an anim')
+
+    local bare = desAnim8.newAnimation(grid()('1-4', 1), 0.1)
+    local c2 = desAnim8.newComposite({ { anim = bare, image = IMG } })
+    clearDraws(); c2:draw(1, 2)
+    eq(drawCalls[1][1], IMG)
+end)
+
+test('batch: random phases, reverse playback, once modes and validation', function()
+    local frames = grid()('1-4', 1)
+    local b = desAnim8.newBatch(IMG, frames, 0.1, 'loop', 4)
+    local first, second = b:add(0, 0), b:add(0, 0)
+    b:randomizePhases(function() return 0.6 end)
+    eq(b:getFrame(first), 3)
+    b:randomizePhases()
+    assert(b:getFrame(second) >= 1 and b:getFrame(second) <= 4)
+
+    b:setSpeed(first, -1); b:setPhase(first, 0.1)
+    b:update(0.1)
+    eq(b:getFrame(first), 4, 'reverse loop wraps to the end')
+
+    local once = desAnim8.newBatch(IMG, frames, 0.1, 'once', 2)
+    local id = once:add(0, 0)
+    once:setSpeed(id, -1); once:setPhase(id, 0.1)
+    once:update(0.5)
+    eq(once:getFrame(id), 1, 'reverse once stops on the first frame')
+    once:update(0.5); eq(once:getFrame(id), 1)
+    once:setPhase(id, 0)
+    once:setSpeed(id, 1); once:update(5)
+    eq(once:getFrame(id), 4, 'forward once stops on the last frame')
+
+    b:update(0); b:update(-1)
+    throws(function() b:setSpeed(first, 'x') end, 'speed')
+    throws(function() b:setPhase(first, 'x') end, 'phase')
+    throws(function() b:update('x') end, 'dt')
+    throws(function() desAnim8.newBatch(IMG, frames, 0.1, 'loop', 0) end, 'capacity')
+end)
+
+test('set: style setters reach every clip, getClip, bad clips and Aseprite variants', function()
+    local a, b = four(0.1), four(0.1)
+    local set = desAnim8.newSet({ a = a, b = b }, 'a')
+    eq(set:setColor(1, 0, 0, 1), set)
+    eq(a._color[2], 0); eq(b._color[2], 0)
+    set:setAlpha(0.5); eq(b._color[4], 0.5)
+    eq(set:getClip('b'), b); eq(set:getClip('zz'), nil)
+    throws(function() desAnim8.newSet({ x = 5 }) end, 'not an animation')
+    throws(function() set:queue('zz') end, 'unknown clip')
+
+    local tagless = { frames = ASE.frames, meta = { size = ASE.meta.size } }
+    local s = desAnim8.newSetFromAseprite(tagless, IMG)
+    eq(select(2, s:getCurrent()), 'default'); eq(s:getFrameCount(), 4)
+
+    local viaText = desAnim8.newSetFromAseprite('TEXT', IMG, { decode = function(text) eq(text, 'TEXT'); return ASE end })
+    eq(select(2, viaText:getCurrent()), 'idle')
+    throws(function() desAnim8.newSetFromAseprite('TEXT', IMG) end, 'decode')
+end)
+
+test('watcher: the default stat reads love.filesystem.getInfo', function()
+    local real = love.filesystem
+    local modtime = 5
+    love.filesystem = { getInfo = function(path) return path == 'a' and { modtime = modtime } or nil end }
+    local ok, err = pcall(function()
+        local fired = 0
+        local w = desAnim8.newWatcher('a', function() fired = fired + 1 end)
+        eq(w:poll(), false)
+        modtime = 6
+        eq(w:poll(), true); eq(fired, 1)
+        eq(desAnim8.newWatcher('missing', function() end):poll(), false)
+    end)
+    love.filesystem = real
+    if not ok then error(err, 0) end
+end)

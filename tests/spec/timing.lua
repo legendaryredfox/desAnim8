@@ -364,3 +364,25 @@ test('setPlayMode, setDurations and gotoFrame stay consistent while easing or st
     local shown = s.currentFrame
     s:update(0.0001); eq(s.currentFrame, shown, 'consistent with the next update')
 end)
+
+test('easing and time-control validation', function()
+    local a = four(0.1)
+    throws(function() a:setEasing(5) end, 'name, a function')
+    throws(function() a:setEasing(function(t) return t * 0.5 end) end, 'map 0 to 0 and 1 to 1')
+    throws(function() a:randomizeStart(function() return 2 end) end, 'rng')
+    local t = desAnim8.newAnimation(grid()('1-4', 1), 3, 'loop', { ticks = true })
+    throws(function() t:freeze(0.5) end, 'integer')
+end)
+
+test('frame lookup is right with many frames (binary search)', function()
+    local frames = desAnim8.newGrid(8, 8, 8 * 16, 8)('1-16', 1)
+    local a = desAnim8.newAnimation(frames, 0.1)
+    for i = 1, 16 do
+        a:setPhase((i - 0.5) / 16)
+        eq(a.currentFrame, i, 'middle of frame ' .. i)
+        a:gotoFrame(i)
+        eq(a.currentFrame, i)
+        a:update(0.05)
+        eq(a.currentFrame, i, 'half way into frame ' .. i)
+    end
+end)

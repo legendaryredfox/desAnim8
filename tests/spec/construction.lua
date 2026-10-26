@@ -132,3 +132,26 @@ test('randomizeStart and jitter', function()
     near(j:getDuration(), 0.6)
     near(four(0.1):getDuration(), 0.4, 'jitter is per instance')
 end)
+
+test('option validation covers randomLength and the data shapes', function()
+    local q = grid()('1-4', 1)
+    local function build(opts) return desAnim8.newAnimation(q, 0.1, 'loop', opts) end
+    throws(function() build({ randomLength = 1 }) end, 'randomLength')
+    throws(function() build({ data = { [1] = 5 } }) end, 'must map to a table')
+    throws(function() build({ data = { [1] = { transform = 5 } } }) end, 'transform must be a table')
+    throws(function() build({ data = { [1] = { trim = { x = 1 } } } }) end, 'trim')
+    throws(function() desAnim8.newAnimation('x', 0.1) end, 'list of quads')
+end)
+
+test('random mode copes with an rng at both ends of its range', function()
+    local q = grid()('1-4', 1)
+    for _, value in ipairs({ 0, 0.5, 1 }) do
+        local a = desAnim8.newAnimation(q, 0.1, 'random', { rng = function() return value end, randomLength = 6 })
+        eq(#a._seq, 6)
+        for i = 1, 6 do
+            local f = a._seq[i]
+            assert(f and f >= 1 and f <= 4, 'frame out of range for rng ' .. value)
+            assert(f ~= a._seq[i % 6 + 1], 'repeat for rng ' .. value)
+        end
+    end
+end)
