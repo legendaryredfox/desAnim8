@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.10.0 (unreleased)
+
+### Added
+- Queries: `getCurrentFrameNumber`, `getRemainingTime`, `getPhase`/`setPhase`, `getLoopCount`, `isFinished`, `getFrameProgress`.
+- SpriteBatch: `addToBatch`, `setInBatch`. Constructor: `newAnimationFromQuads`, `newGridFromImage`.
+- Grid: `inset` argument, `Grid:clearCache`, quad cache for identical calls, `desAnim8.maxImageSize` advisory warning.
+- Time engine: `setSpeed`/`getSpeed` (negative plays backwards), `fitDuration`, `freeze`, `setStep`, `setEasing`, `randomizeStart`, `wait`, `tick`, `desAnim8.setTimeScale`/`getTimeScale`.
+- Loop ranges: `setLoopRange`, `clearLoopRange`, `release`.
+- Events: `onFrame`/`offFrame`, `addMarker`/`clearMarkers`, `onStart` and `onEnd` fields.
+- Runtime changes: `setPlayMode`, `setDurations`.
+- Constructor `opts` (fifth argument): `ticks`, `weights`, `jitter`, `rng`, `randomLength`, `data`; new `'random'` play mode.
+- Per-frame data: `getFrameData`, `getWorldRect`, `setAutoPivot`, trim offsets and keyframe `transform` data with `setInterpolation`.
+- Atlases: `newFramesFromRecords`, `atlas.fromTexturePacker`, `atlas.fromStarling`, `atlas.fromAseprite`.
+- Aseprite: `newFromAseprite` (tags, directions, slices as frame data) and `newSetFromAseprite`.
+- Sheet tools: `scanBounds`, `dataFromLists`, `sliceByAlpha`, `newQuadsFromRects`.
+- Render style: `setColor`, `setAlpha`, `setBlendMode`, `setShader`, `flash`, `faceTowards`, `setDefaultFacing`, `setPixelSnap`, `setTrail`/`getTrail`, `setOnion`, `desAnim8.shaders` (GLSL sources).
+- Debugging: `drawBounds`, `desAnim8.debug.drawTimeline`, `desAnim8.debug.scrub`.
+- Composition: `newSet` (named clips with `play`, `queue`, `keepPhase`), `newComposite` (layers on one clock), `newBatch` (many entries, one SpriteBatch), `newWatcher`.
+- `getState`/`setState` for saving and restoring playback.
+- LuaCATS annotations, a rockspec, `.luacheckrc`, `examples/showcase`, `tests/bench.lua`, and the README in Brazilian Portuguese and English.
+
+### Changed
+- `resume()` on a looping animation parked by `pauseAtEnd` starts over instead of refiring `onLoop`.
+- Hooks run after the frame is updated, so `onLoop` sees the new `currentFrame`.
+- `getFrameInfo` applies trim and transform data; its flip math is unchanged for plain animations.
+- Supported runtimes: LuaJIT 2.1 and Lua 5.1 through 5.5; CI covers luajit, 5.1, 5.4 and 5.5.
+- `update` costs about 25% more than 0.5.0 (about 0.12 us on LuaJIT).
+
 ## 0.5.0
 
 ### Fixed
