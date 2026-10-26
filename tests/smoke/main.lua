@@ -2,7 +2,9 @@
 -- mocked unit tests cannot do. Run from the repository root:
 --   xvfb-run -a love tests/smoke
 package.path = love.filesystem.getSource() .. '/../../?.lua;' .. package.path
-local desAnim8 = require 'desAnim8'
+-- DESANIM8_BUNDLE=dist/desAnim8.lua tests the single-file build instead.
+local bundle = os.getenv('DESANIM8_BUNDLE')
+local desAnim8 = bundle and dofile(bundle) or require 'desAnim8'
 
 local failures = 0
 local function check(name, ok, detail)

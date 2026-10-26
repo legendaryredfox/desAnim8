@@ -53,7 +53,9 @@ love = {
     },
 }
 
-local desAnim8 = require 'desAnim8'
+-- DESANIM8_BUNDLE=dist/desAnim8.lua runs the suite against the single-file build.
+local bundle = os.getenv('DESANIM8_BUNDLE')
+local desAnim8 = bundle and dofile(bundle) or require 'desAnim8'
 
 -- ── Harness ───────────────────────────────────────────────────────────────────
 
@@ -89,7 +91,7 @@ local function throws(fn, pattern, label)
     if not err:find(pattern) then
         error(('%s: error %q does not match %q'):format(label or 'call', err, pattern), 2)
     end
-    if err:find('desAnim8%.lua') then
+    if err:find('desAnim8%.lua') or err:find('desAnim8/[%w_]+%.lua') then
         error(('%s: error points inside the library: %q'):format(label or 'call', err), 2)
     end
 end

@@ -1,7 +1,10 @@
--- Rough update() cost check. Usage: luajit tests/bench.lua [path/to/desAnim8.lua]
-local path = arg and arg[1] or 'desAnim8.lua'
+-- Rough update() cost check. Usage: luajit tests/bench.lua [dist/desAnim8.lua]
+-- With a path it benchmarks that single-file build; otherwise the modular source.
+local root = (arg and arg[0] or ''):match('^(.*)/tests/[^/]*$') or '.'
+package.path = root .. '/?.lua;' .. package.path
+local bundle = arg and arg[1]
 love = { graphics = { newQuad = function() return { getViewport = function() return 0, 0, 16, 16 end } end } }
-local desAnim8 = dofile(path)
+local desAnim8 = bundle and dofile(bundle) or require 'desAnim8'
 local frames = {}
 for i = 1, 8 do frames[i] = love.graphics.newQuad(0, 0, 16, 16, 128, 16) end
 local anims = {}
