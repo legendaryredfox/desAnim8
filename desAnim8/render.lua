@@ -182,6 +182,7 @@ function Animation:flash(seconds, r, g, b)
         error(('flash: seconds must be a positive number, got %s'):format(tostring(seconds)), 2)
     end
     self._flash = { left = seconds, r = r or 1, g = g or 1, b = b or 1 }
+    self._plain = nil
     return self
 end
 

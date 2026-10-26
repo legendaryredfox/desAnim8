@@ -213,6 +213,7 @@ end
 -- Loop range support: playback wraps inside [_wrapStart, _wrapEnd], which is the
 -- whole sequence unless setLoopRange narrowed it and release() has not been called.
 local function applyRegion(self)
+    self._plain = nil
     local from, to = self._loopFrom, self._loopTo
     if from and not self._released then
         self._wrapStart, self._wrapEnd = self._intervals[from], self._intervals[to + 1]
@@ -614,6 +615,7 @@ function Animation:onFrame(n, fn)
     checkFrameNumber(self, n, 'onFrame')
     if type(fn) ~= 'function' then error('onFrame: expected a function', 2) end
     self._onFrame = self._onFrame or {}
+    self._plain = nil
     local list = self._onFrame[n]
     if not list then list = {}; self._onFrame[n] = list end
     list[#list + 1] = fn
@@ -650,6 +652,7 @@ function Animation:addMarker(t, fn)
     end
     if type(fn) ~= 'function' then error('addMarker: expected a function', 2) end
     self._markers = self._markers or {}
+    self._plain = nil
     self._markers[#self._markers + 1] = { t = t, fn = fn }
     return self
 end
@@ -657,6 +660,7 @@ end
 ---@return desAnim8.Animation
 function Animation:clearMarkers()
     self._markers = nil
+    self._plain = nil
     return self
 end
 
@@ -685,9 +689,33 @@ local Animation = {}
 
 ---@param dt number
 ---@return nil
+-- True when update can take its shortcut: forward playback at speed 1 with no
+-- hooks, markers, freeze, flash, easing, step, loop range or tick mode in play.
+-- The answer is cached in _plain, and every method that changes one of those
+-- things sets _plain = nil so it is worked out again.
+local function isPlain(self)
+    return not self._ticks and self._speed == 1 and self._freeze == 0 and self._started
+        and not self._onFrame and not self._markers and not self._ease and not self._step
+        and not self._flash and self._wrapStart == 0 and self._wrapEnd == self._totalDuration
+end
+
 function Animation:update(dt)
     if type(dt) ~= 'number' then
         error(('update: dt must be a number, got %s'):format(type(dt)), 2)
+    end
+    local plain = self._plain
+    if plain == nil then
+        plain = isPlain(self)
+        self._plain = plain
+    end
+    if plain and self.status == 'playing' and dt > 0 and dt < math.huge then
+        local timer = self._timer + dt * clock.scale
+        if timer < self._totalDuration then
+            self._timer = timer
+            local position = seekIndex(self._intervals, timer)
+            self._position, self.currentFrame = position, self._seq[position]
+            return
+        end
     end
     local ticks = self._ticks
     if ticks and dt ~= math.floor(dt) then
@@ -696,12 +724,16 @@ function Animation:update(dt)
     local flash = self._flash
     if flash and dt > 0 then
         flash.left = flash.left - dt
-        if flash.left <= 0 then self._flash = nil end
+        if flash.left <= 0 then
+            self._flash = nil
+            self._plain = nil
+        end
     end
     -- Also rejects NaN, which would otherwise poison the timer permanently.
     if self.status ~= 'playing' or not (dt > 0) or dt == math.huge then return end
 
     if self._freeze > 0 then
+        self._plain = nil
         if dt <= self._freeze then
             self._freeze = self._freeze - dt
             return
@@ -716,6 +748,7 @@ function Animation:update(dt)
 
     if not self._started then
         self._started = true
+        self._plain = nil
         callHook(self, 'onStart')
     end
 
@@ -890,6 +923,7 @@ function Animation:pauseAtStart()
     self._position    = 1
     self._timer       = 0
     self._started     = false
+    self._plain       = nil
     self.currentFrame = self._seq[1]
     self.status       = 'paused'
 end
@@ -905,6 +939,7 @@ function Animation:reset()
     self._loops       = 0
     self._freeze      = 0
     self._started     = false
+    self._plain       = nil
     self._released    = false
     applyRegion(self)
     self.currentFrame = self._seq[1]
@@ -978,6 +1013,7 @@ end
 function Animation:setSpeed(rate)
     assertSpeedValue(self, rate, 'setSpeed: speed')
     self._speed = rate
+    self._plain = nil
     return self
 end
 
@@ -995,6 +1031,7 @@ function Animation:fitDuration(seconds)
         error(('fitDuration: seconds must be a positive number, got %s'):format(tostring(seconds)), 2)
     end
     self._speed = (self._speed < 0 and -1 or 1) * self._totalDuration / seconds
+    self._plain = nil
     return self
 end
 
@@ -1010,6 +1047,7 @@ function Animation:freeze(seconds)
         error('freeze: seconds must be an integer in ticks mode', 2)
     end
     self._freeze = seconds
+    self._plain = nil
     return self
 end
 
@@ -1022,6 +1060,7 @@ function Animation:setStep(seconds)
         error(('setStep: step must be a positive number or nil, got %s'):format(tostring(seconds)), 2)
     end
     self._step = seconds
+    self._plain = nil
     locate(self)
     return self
 end
@@ -1032,6 +1071,7 @@ end
 ---@return desAnim8.Animation
 function Animation:setEasing(easing)
     self._ease = resolveEasing(easing, 'setEasing', 3)
+    self._plain = nil
     locate(self)
     return self
 end
@@ -1566,6 +1606,7 @@ function Animation:flash(seconds, r, g, b)
         error(('flash: seconds must be a positive number, got %s'):format(tostring(seconds)), 2)
     end
     self._flash = { left = seconds, r = r or 1, g = g or 1, b = b or 1 }
+    self._plain = nil
     return self
 end
 
@@ -1793,6 +1834,7 @@ function Animation:setState(s)
     self._speed    = speed
     self._freeze   = freeze
     self._started  = started
+    self._plain    = nil
     locate(self)
     return self
 end
@@ -1902,6 +1944,7 @@ function Animation:clone()
         c._trail = { count = t.count, spacing = t.spacing, alpha = t.alpha, entries = {}, draws = 0 }
     end
     c._flash    = nil
+    c._plain    = nil
     c._timer    = 0
     c._position = 1
     c._loops    = 0

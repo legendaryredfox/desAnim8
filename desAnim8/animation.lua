@@ -99,6 +99,7 @@ function Animation:clone()
         c._trail = { count = t.count, spacing = t.spacing, alpha = t.alpha, entries = {}, draws = 0 }
     end
     c._flash    = nil
+    c._plain    = nil
     c._timer    = 0
     c._position = 1
     c._loops    = 0

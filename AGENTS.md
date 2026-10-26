@@ -22,7 +22,7 @@ desAnim8: sprite animation library for **LÖVE 11.5**, the latest release (inspi
 - Test-first for behavior changes (suite: `tests/run.lua`; put new tests in the spec file that matches the concern). Run `luacheck desAnim8.lua desAnim8 tests tools examples` before committing. Coverage: `luajit -lluacov tests/run.lua && luacov` (config in `.luacov`); it was 99.8% at v0.10.0, keep new code covered. Roadmap and item IDs live in `FIX_PLAN.md` (v2).
 - Aseprite import and caching are done (FIX_PLAN D3.4/D2.5, based on `josh-perry/peachy` and `tarhses/nim.lua`). Keep imports dependency-free (a predecoded table or a decoder callback) so they run on console targets. Features that need more than `newQuad`/`draw` (shaders, ImageData, SpriteBatch, filesystem, push/pop) stay optional and never touch `love` at `require` time.
 - New behavior goes in the module that owns the concern (see Layout); a new module also needs an entry in `desAnim8.lua` (if public), the rockspec `modules` list and `tools/bundle.lua`'s `MODULES`.
-- Hot path: `Animation:update` is benchmarked by `tests/bench.lua`; keep it allocation-free.
+- Hot path: `Animation:update` is benchmarked by `tests/bench.lua`; keep it allocation-free. It has a shortcut for plain playback guarded by the cached `_plain` flag (see `isPlain` in `playback.lua`): any code that changes `_ticks`, `_speed`, `_freeze`, `_started`, `_onFrame`, `_markers`, `_ease`, `_step`, `_flash`, `_wrapStart` or `_wrapEnd` must set `self._plain = nil` (`applyRegion` already does for the wrap region). `spec/fuzz.lua` compares the shortcut with the general path.
 - README is bilingual on one page, Brazilian Portuguese first, then English. Edit both halves together.
 
 ## Internals

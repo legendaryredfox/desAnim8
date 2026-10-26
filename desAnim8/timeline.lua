@@ -29,6 +29,7 @@ end
 function Animation:setSpeed(rate)
     assertSpeedValue(self, rate, 'setSpeed: speed')
     self._speed = rate
+    self._plain = nil
     return self
 end
 
@@ -46,6 +47,7 @@ function Animation:fitDuration(seconds)
         error(('fitDuration: seconds must be a positive number, got %s'):format(tostring(seconds)), 2)
     end
     self._speed = (self._speed < 0 and -1 or 1) * self._totalDuration / seconds
+    self._plain = nil
     return self
 end
 
@@ -61,6 +63,7 @@ function Animation:freeze(seconds)
         error('freeze: seconds must be an integer in ticks mode', 2)
     end
     self._freeze = seconds
+    self._plain = nil
     return self
 end
 
@@ -73,6 +76,7 @@ function Animation:setStep(seconds)
         error(('setStep: step must be a positive number or nil, got %s'):format(tostring(seconds)), 2)
     end
     self._step = seconds
+    self._plain = nil
     locate(self)
     return self
 end
@@ -83,6 +87,7 @@ end
 ---@return desAnim8.Animation
 function Animation:setEasing(easing)
     self._ease = resolveEasing(easing, 'setEasing', 3)
+    self._plain = nil
     locate(self)
     return self
 end

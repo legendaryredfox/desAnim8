@@ -98,6 +98,7 @@ function Animation:setState(s)
     self._speed    = speed
     self._freeze   = freeze
     self._started  = started
+    self._plain    = nil
     locate(self)
     return self
 end

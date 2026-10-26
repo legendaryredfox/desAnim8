@@ -14,9 +14,33 @@ local Animation = {}
 
 ---@param dt number
 ---@return nil
+-- True when update can take its shortcut: forward playback at speed 1 with no
+-- hooks, markers, freeze, flash, easing, step, loop range or tick mode in play.
+-- The answer is cached in _plain, and every method that changes one of those
+-- things sets _plain = nil so it is worked out again.
+local function isPlain(self)
+    return not self._ticks and self._speed == 1 and self._freeze == 0 and self._started
+        and not self._onFrame and not self._markers and not self._ease and not self._step
+        and not self._flash and self._wrapStart == 0 and self._wrapEnd == self._totalDuration
+end
+
 function Animation:update(dt)
     if type(dt) ~= 'number' then
         error(('update: dt must be a number, got %s'):format(type(dt)), 2)
+    end
+    local plain = self._plain
+    if plain == nil then
+        plain = isPlain(self)
+        self._plain = plain
+    end
+    if plain and self.status == 'playing' and dt > 0 and dt < math.huge then
+        local timer = self._timer + dt * clock.scale
+        if timer < self._totalDuration then
+            self._timer = timer
+            local position = seekIndex(self._intervals, timer)
+            self._position, self.currentFrame = position, self._seq[position]
+            return
+        end
     end
     local ticks = self._ticks
     if ticks and dt ~= math.floor(dt) then
@@ -25,12 +49,16 @@ function Animation:update(dt)
     local flash = self._flash
     if flash and dt > 0 then
         flash.left = flash.left - dt
-        if flash.left <= 0 then self._flash = nil end
+        if flash.left <= 0 then
+            self._flash = nil
+            self._plain = nil
+        end
     end
     -- Also rejects NaN, which would otherwise poison the timer permanently.
     if self.status ~= 'playing' or not (dt > 0) or dt == math.huge then return end
 
     if self._freeze > 0 then
+        self._plain = nil
         if dt <= self._freeze then
             self._freeze = self._freeze - dt
             return
@@ -45,6 +73,7 @@ function Animation:update(dt)
 
     if not self._started then
         self._started = true
+        self._plain = nil
         callHook(self, 'onStart')
     end
 
@@ -219,6 +248,7 @@ function Animation:pauseAtStart()
     self._position    = 1
     self._timer       = 0
     self._started     = false
+    self._plain       = nil
     self.currentFrame = self._seq[1]
     self.status       = 'paused'
 end
@@ -234,6 +264,7 @@ function Animation:reset()
     self._loops       = 0
     self._freeze      = 0
     self._started     = false
+    self._plain       = nil
     self._released    = false
     applyRegion(self)
     self.currentFrame = self._seq[1]

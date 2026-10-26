@@ -113,6 +113,7 @@ end
 -- Loop range support: playback wraps inside [_wrapStart, _wrapEnd], which is the
 -- whole sequence unless setLoopRange narrowed it and release() has not been called.
 local function applyRegion(self)
+    self._plain = nil
     local from, to = self._loopFrom, self._loopTo
     if from and not self._released then
         self._wrapStart, self._wrapEnd = self._intervals[from], self._intervals[to + 1]

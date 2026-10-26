@@ -159,3 +159,77 @@ test('fuzz: random call sequences keep the animation consistent', function()
     end
     assert(calls == 250 * 60)
 end)
+
+-- update has a shortcut for plain playback, guarded by the cached _plain flag. B is
+-- forced down the general path before every action; both must stay identical, which
+-- catches any method that forgets to invalidate the flag.
+test('fuzz: the plain-playback shortcut matches the general path', function()
+    local rng = lcg()
+    local modes = { 'loop', 'once', 'bounce', 'bounceOnce' }
+    local easings = { 'inQuad', 'outCubic', 'inOutQuad' }
+    local function pick(list) return list[1 + math.floor(rng() * #list)] end
+    local shortcuts = 0
+
+    for round = 1, 300 do
+        local n = 2 + math.floor(rng() * 5)
+        local frames = desAnim8.newGrid(8, 8, 8 * 8, 8)('1-' .. n, 1)
+        local durations = {}
+        for i = 1, n do durations[i] = 0.02 + rng() * 0.3 end
+        local mode = pick(modes)
+        local a = desAnim8.newAnimation(frames, durations, mode)
+        local b = desAnim8.newAnimation(frames, durations, mode)
+
+        local actions = {
+            function(x, p) x:update(p * 0.2) end,
+            function(x, p) x:update(p * 0.2) end,
+            function(x, p) x:update(p * 0.2) end,
+            function(x, p) x:update(p * 0.05) end,
+            function(x) x:pause() end,
+            function(x) x:resume() end,
+            function(x) x:reset() end,
+            function(x) x:pauseAtEnd() end,
+            function(x) x:pauseAtStart() end,
+            function(x, p) x:gotoFrame(1 + math.floor(p * x:getFrameCount())) end,
+            function(x, p) x:setPhase(p) end,
+            function(x) x:setSpeed(1) end,
+            function(x, p) x:setSpeed(p < 0.5 and -1 or 2) end,
+            function(x, p) x:freeze(p * 0.1) end,
+            function(x) x:setStep(nil) end,
+            function(x, p) x:setStep(0.01 + p * 0.1) end,
+            function(x) x:setEasing(nil) end,
+            function(x, p) x:setEasing(easings[1 + math.floor(p * #easings)]) end,
+            function(x) x:flash(0.05) end,
+            function(x) x:onFrame(1, function() end) end,
+            function(x, p) x:addMarker(p * x:getDuration(), function() end) end,
+            function(x) x:clearMarkers() end,
+            function(x, p)
+                if x:getPlayMode() == 'loop' and x:getFrameCount() >= 2 then x:setLoopRange(1, 1 + math.floor(p * (x:getFrameCount() - 1))) end
+            end,
+            function(x) x:clearLoopRange() end,
+            function(x) if x._loopFrom then x:release() end end,
+            function(x, p) x:setPlayMode(modes[1 + math.floor(p * #modes)]) end,
+            function(x) x:setState(x:getState()) end,
+        }
+
+        for step = 1, 80 do
+            local index = 1 + math.floor(rng() * #actions)
+            local p = rng()
+            actions[index](a, p)
+            actions[index](b, p)
+            b._plain = false
+            local label = ('round %d step %d action %d'):format(round, step, index)
+            eq(a.currentFrame, b.currentFrame, label .. ': frame after the action')
+            -- a short update right after: this is where the shortcut can be taken
+            a:update(p * 0.03)
+            b:update(p * 0.03)
+            if a._plain then shortcuts = shortcuts + 1 end
+            b._plain = false
+            label = ('round %d step %d action %d'):format(round, step, index)
+            eq(a.currentFrame, b.currentFrame, label .. ': frame')
+            eq(a._timer, b._timer, label .. ': timer')
+            eq(a.status, b.status, label .. ': status')
+            eq(a._loops, b._loops, label .. ': loops')
+        end
+    end
+    assert(shortcuts > 500, 'the shortcut was barely exercised: ' .. shortcuts)
+end)

@@ -92,6 +92,7 @@ function Animation:onFrame(n, fn)
     checkFrameNumber(self, n, 'onFrame')
     if type(fn) ~= 'function' then error('onFrame: expected a function', 2) end
     self._onFrame = self._onFrame or {}
+    self._plain = nil
     local list = self._onFrame[n]
     if not list then list = {}; self._onFrame[n] = list end
     list[#list + 1] = fn
@@ -128,6 +129,7 @@ function Animation:addMarker(t, fn)
     end
     if type(fn) ~= 'function' then error('addMarker: expected a function', 2) end
     self._markers = self._markers or {}
+    self._plain = nil
     self._markers[#self._markers + 1] = { t = t, fn = fn }
     return self
 end
@@ -135,6 +137,7 @@ end
 ---@return desAnim8.Animation
 function Animation:clearMarkers()
     self._markers = nil
+    self._plain = nil
     return self
 end
 
