@@ -10,7 +10,7 @@
 
 # Português (BR)
 
-Biblioteca de animação de sprites para **LÖVE 11.5**, em um único arquivo e sem dependências. Desenha com `love.graphics.draw` e Quads, então roda também em camadas compatíveis com LÖVE para consoles.
+Biblioteca de animação de sprites para **LÖVE 11.5**, sem dependências, organizada em módulos pequenos e também disponível como um único arquivo. Desenha com `love.graphics.draw` e Quads, então roda também em camadas compatíveis com LÖVE para consoles.
 
 Este projeto foi baseado no [anim8 do kikito](https://github.com/kikito/anim8). Se você gostar, considere apoiar o trabalho dele.
 
@@ -68,16 +68,19 @@ Um projeto completo e executável está em `examples/showcase` (`love examples/s
 
 ## Instalação
 
-desAnim8 é um arquivo único, sem dependências além do próprio LÖVE.
+desAnim8 não tem dependências além do próprio LÖVE. Há duas formas de usar:
 
-1. Copie `desAnim8.lua` para o seu projeto (por exemplo `libraries/desAnim8.lua`).
-2. Use `require`:
+**Módulos** (para desenvolvimento): copie `desAnim8.lua` **e a pasta `desAnim8/`** para o mesmo lugar do seu projeto (por exemplo `libraries/desAnim8.lua` e `libraries/desAnim8/`). Os módulos se acham sozinhos a partir do nome que você passou ao `require`.
+
+**Arquivo único** (para consoles ou quando `require` de vários arquivos atrapalha): copie só `dist/desAnim8.lua`. Ele é gerado pelos módulos com `lua tools/bundle.lua`, traz o próprio `require` interno e não mexe em `package.path`.
 
 ```lua
-local desAnim8 = require 'libraries.desAnim8'   -- ajuste o caminho
+local desAnim8 = require 'libraries.desAnim8'   -- ajuste o caminho; vale para as duas formas
 ```
 
 Também há um rockspec: `luarocks make desanim8-0.10.0-1.rockspec`.
+
+Estrutura: `desAnim8.lua` monta a API; `desAnim8/` tem o núcleo (`util`, `timing`, `options`, `animation`), os módulos que acrescentam métodos à animação (`playback`, `timeline`, `events`, `frameinfo`, `render`, `state`) e os recursos independentes (`grid`, `constructors`, `atlas`, `sheet`, `set`, `composite`, `batch`, `watcher`, `debug`, `shaders`).
 
 **Versões suportadas:** LÖVE 11.5 (a última versão estável), LuaJIT 2.1 e Lua 5.1 até 5.5. O código usa só o subconjunto comum dessas versões. As partes que dependem de mais do que `love.graphics.newQuad` e `love.graphics.draw` estão marcadas como **[LÖVE]** neste documento e nunca tocam na API do LÖVE ao carregar o módulo.
 
@@ -602,7 +605,7 @@ O desAnim8 já importa a exportação do Aseprite (ver [Atlas e Aseprite](#atlas
 
 ## Usando em consoles (PSP / Vita / PS3)
 
-O desAnim8 foi escrito pensando no [LOVE-WrapLua](https://github.com/legendaryredfox/LOVE-WrapLua), então o mesmo código de animação roda em hardware homebrew. O núcleo toca só em `love.graphics.newQuad`, `love.graphics.draw(image, quad, ...)` e `quad:getViewport()`, nunca em dados nativos de imagem do backend. Em backends que guardam o handle da imagem, crie a animação sem imagem (`newAnimation`) e passe a imagem no `draw`: `anim:draw(image, x, y)`.
+O desAnim8 foi escrito pensando no [LOVE-WrapLua](https://github.com/legendaryredfox/LOVE-WrapLua), então o mesmo código de animação roda em hardware homebrew. O núcleo toca só em `love.graphics.newQuad`, `love.graphics.draw(image, quad, ...)` e `quad:getViewport()`, nunca em dados nativos de imagem do backend. Em backends que guardam o handle da imagem, crie a animação sem imagem (`newAnimation`) e passe a imagem no `draw`: `anim:draw(image, x, y)`. Se o wrapper não resolver `require` de vários arquivos, use o `dist/desAnim8.lua`.
 
 Recursos que precisam de mais do que isso e podem não existir no wrapper: `setColor`/`setAlpha`/`flash`, rastro e onion skin (usam `love.graphics.setColor`), `setBlendMode`, `setShader` e `desAnim8.shaders`, `Batch` e `addToBatch` (SpriteBatch), `drawBounds` e `debug.*` (push/translate/rectangle), `scanBounds`/`sliceByAlpha` (ImageData) e `Watcher` (filesystem). O resto (reprodução, eventos, dados, Set, Composite, atlas, Aseprite, estado) é Lua puro.
 
@@ -611,7 +614,7 @@ Limites de GPU a ter em mente ao montar spritesheets:
 - **PSP:** texturas devem ser **potência de dois** e **≤ 512×512**. Divida sheets maiores em várias imagens.
 - **Vita (OneLua) e PS3:** sheets de até **512×512**. **lpp-vita** e o 3DS aceitam até **1024×1024**. O wrapper registra um aviso `[LOVE-WrapLua]` quando um sheet passa do limite do backend.
 - Desenhar quads e animar funciona em todos os backends do wrapper. lpp-vita e PS3 são o nível "parcial" do wrapper, então confira o `Implemented.md` dele antes de usar outras chamadas.
-- O LOVE-WrapLua inclui uma cópia de `desAnim8.lua` em `game/libraries/`; atualize-a daqui a cada nova versão.
+- O LOVE-WrapLua inclui uma cópia do `desAnim8.lua` (arquivo único) em `game/libraries/`; atualize-a com o `dist/desAnim8.lua` a cada nova versão.
 
 ---
 
@@ -637,6 +640,8 @@ Limites de GPU a ter em mente ao montar spritesheets:
 
 ```sh
 luajit tests/run.lua            # testes unitários (também em lua5.1, lua5.4 e lua 5.5)
+lua tools/bundle.lua            # regenera dist/desAnim8.lua (--check confere se está em dia)
+DESANIM8_BUNDLE=dist/desAnim8.lua luajit tests/run.lua   # os mesmos testes no arquivo único
 xvfb-run -a love tests/smoke    # renderiza numa janela LÖVE real e confere extensões de pixels
 luajit tests/bench.lua          # custo de update() para acompanhar regressões
 love examples/showcase          # demonstração interativa
@@ -648,7 +653,7 @@ love examples/showcase          # demonstração interativa
 
 # English
 
-A sprite animation library for **LÖVE 11.5**, in a single file with no dependencies. It draws with `love.graphics.draw` and Quads, so it also runs on LÖVE-compatible console layers.
+A sprite animation library for **LÖVE 11.5**, with no dependencies, organized in small modules and also available as a single file. It draws with `love.graphics.draw` and Quads, so it also runs on LÖVE-compatible console layers.
 
 This project was based on [kikito's anim8](https://github.com/kikito/anim8). If you like it, please consider supporting his work.
 
@@ -706,16 +711,19 @@ A complete runnable project lives in `examples/showcase` (`love examples/showcas
 
 ## Installing
 
-desAnim8 is a single file with no dependencies beyond LÖVE itself.
+desAnim8 has no dependencies beyond LÖVE itself. There are two ways to use it:
 
-1. Copy `desAnim8.lua` into your project (e.g. `libraries/desAnim8.lua`).
-2. `require` it:
+**Modules** (for development): copy `desAnim8.lua` **and the `desAnim8/` folder** to the same place in your project (e.g. `libraries/desAnim8.lua` and `libraries/desAnim8/`). The modules find each other from the name you gave `require`.
+
+**Single file** (for consoles, or when requiring several files is awkward): copy just `dist/desAnim8.lua`. It is generated from the modules with `lua tools/bundle.lua`, carries its own private `require` and leaves `package.path` alone.
 
 ```lua
-local desAnim8 = require 'libraries.desAnim8'   -- adjust the path to where you put it
+local desAnim8 = require 'libraries.desAnim8'   -- adjust the path to where you put it; same for both
 ```
 
 A rockspec is included too: `luarocks make desanim8-0.10.0-1.rockspec`.
+
+Layout: `desAnim8.lua` assembles the API; `desAnim8/` holds the core (`util`, `timing`, `options`, `animation`), the modules that add methods to the animation (`playback`, `timeline`, `events`, `frameinfo`, `render`, `state`) and the independent features (`grid`, `constructors`, `atlas`, `sheet`, `set`, `composite`, `batch`, `watcher`, `debug`, `shaders`).
 
 **Supported versions:** LÖVE 11.5 (the latest stable release), LuaJIT 2.1 and Lua 5.1 through 5.5. The code sticks to the common subset of those. Parts that need more than `love.graphics.newQuad` and `love.graphics.draw` are marked **[LÖVE]** in this document, and none of them touch the LÖVE API when the module loads.
 
@@ -1242,7 +1250,7 @@ desAnim8 already imports the Aseprite export (see [Atlases and Aseprite](#atlase
 
 ## Using on consoles (PSP / Vita / PS3)
 
-desAnim8 was written with [LOVE-WrapLua](https://github.com/legendaryredfox/LOVE-WrapLua) in mind, so the same animation code runs on homebrew hardware. The core touches only `love.graphics.newQuad`, `love.graphics.draw(image, quad, ...)` and `quad:getViewport()`, never a backend's native image data. On backends that own the image handle, build the animation image-less (`newAnimation`) and pass the image at draw time: `anim:draw(image, x, y)`.
+desAnim8 was written with [LOVE-WrapLua](https://github.com/legendaryredfox/LOVE-WrapLua) in mind, so the same animation code runs on homebrew hardware. The core touches only `love.graphics.newQuad`, `love.graphics.draw(image, quad, ...)` and `quad:getViewport()`, never a backend's native image data. On backends that own the image handle, build the animation image-less (`newAnimation`) and pass the image at draw time: `anim:draw(image, x, y)`. If the wrapper cannot resolve a multi-file `require`, use `dist/desAnim8.lua`.
 
 Features that need more than that and may be missing on a wrapper: `setColor`/`setAlpha`/`flash`, trail and onion skin (they use `love.graphics.setColor`), `setBlendMode`, `setShader` and `desAnim8.shaders`, `Batch` and `addToBatch` (SpriteBatch), `drawBounds` and `debug.*` (push/translate/rectangle), `scanBounds`/`sliceByAlpha` (ImageData) and `Watcher` (filesystem). The rest (playback, events, data, Set, Composite, atlases, Aseprite, state) is pure Lua.
 
@@ -1251,7 +1259,7 @@ Keep the console GPU limits in mind when building spritesheets:
 - **PSP:** textures must be **power-of-two** and **≤ 512×512**. Split larger sheets into multiple images.
 - **Vita (OneLua) and PS3:** sheets up to **512×512**. **lpp-vita** and the 3DS accept up to **1024×1024**. The wrapper logs a `[LOVE-WrapLua]` warning when a sheet is over its backend's limit.
 - Quad drawing and animation work on every wrapper backend. lpp-vita and PS3 are the wrapper's "partial" tier, so check its `Implemented.md` before relying on calls other than the ones desAnim8 uses.
-- LOVE-WrapLua bundles a copy of `desAnim8.lua` in `game/libraries/`; update it from here when a new version is released.
+- LOVE-WrapLua bundles a single-file copy of `desAnim8.lua` in `game/libraries/`; update it from `dist/desAnim8.lua` when a new version is released.
 
 ---
 
@@ -1277,6 +1285,8 @@ Keep the console GPU limits in mind when building spritesheets:
 
 ```sh
 luajit tests/run.lua            # unit tests (also under lua5.1, lua5.4 and lua 5.5)
+lua tools/bundle.lua            # rebuild dist/desAnim8.lua (--check verifies it is current)
+DESANIM8_BUNDLE=dist/desAnim8.lua luajit tests/run.lua   # the same tests against the single file
 xvfb-run -a love tests/smoke    # renders in a real LÖVE window and checks pixel extents
 luajit tests/bench.lua          # update() cost, to spot regressions
 love examples/showcase          # interactive demo

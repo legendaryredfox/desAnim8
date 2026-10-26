@@ -22,6 +22,7 @@
 - LuaCATS annotations, a rockspec, `.luacheckrc`, `examples/showcase`, `tests/bench.lua`, and the README in Brazilian Portuguese and English.
 
 ### Changed
+- The library is split into modules under `desAnim8/` behind a thin `desAnim8.lua` entry; `require 'desAnim8'` is unchanged. `lua tools/bundle.lua` builds the single-file `dist/desAnim8.lua` for consoles, and CI keeps it current and tested.
 - `resume()` on a looping animation parked by `pauseAtEnd` starts over instead of refiring `onLoop`.
 - Hooks run after the frame is updated, so `onLoop` sees the new `currentFrame`.
 - `getFrameInfo` applies trim and transform data; its flip math is unchanged for plain animations.
