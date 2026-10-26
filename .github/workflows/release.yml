@@ -1,0 +1,34 @@
+name: release
+
+# Pushing a tag such as v0.10.0 publishes a GitHub release with the single-file
+# build and a zip of the modular source.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y luajit lua5.4
+      - name: Tag matches the library version
+        run: |
+          version=$(grep -o "_VERSION *= *'desAnim8 v[0-9.]*'" desAnim8.lua | grep -o "v[0-9.]*")
+          echo "library $version, tag $GITHUB_REF_NAME"
+          test "$version" = "$GITHUB_REF_NAME"
+      - name: Tests pass and the single-file build is current
+        run: |
+          luajit tests/run.lua
+          lua5.4 tests/run.lua
+          lua5.4 tools/bundle.lua --check
+          DESANIM8_BUNDLE=dist/desAnim8.lua luajit tests/run.lua
+      - name: Package
+        run: zip -r desAnim8-modules.zip desAnim8.lua desAnim8 LICENSE
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/desAnim8.lua desAnim8-modules.zip --generate-notes --title "$GITHUB_REF_NAME"
