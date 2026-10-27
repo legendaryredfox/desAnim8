@@ -337,7 +337,7 @@ A biblioteca não lê arquivos nem decodifica JSON (para continuar sem dependên
 
 ### Aseprite
 
-Exporte como **JSON Data, Array** (não hash) com **Frame Tags** (defina ao menos uma tag, mesmo para uma animação só). O caminho da imagem dentro do JSON é ignorado: passe a imagem você mesmo.
+Exporte como **JSON Data, Array** (ou Hash, veja abaixo) com **Frame Tags** (defina ao menos uma tag, mesmo para uma animação só). O caminho da imagem dentro do JSON é ignorado: passe a imagem você mesmo.
 
 ```lua
 local json = love.filesystem.read('hero.json')
@@ -348,8 +348,9 @@ local anim = desAnim8.newFromAseprite(json, image, 'run', { decode = myJsonDecod
 - `tag` nulo usa todos os frames, para frente.
 - Direção da tag: `forward` é `loop`, `pingpong` é `bounce`, `reverse` inverte a lista de frames, `pingpong_reverse` inverte um `bounce`. `opts.playMode` troca o modo. As demais opções vão para o construtor.
 - Durações vêm em milissegundos e viram segundos. O tamanho da imagem vem de `meta.size` (ou da imagem passada).
-- **Slices** viram dados por frame: cada slice vira uma chave com o seu nome (o retângulo `bounds`), valendo da chave `frame` até a próxima; um slice com `pivot` define também `pivot`. O campo `repeat` das tags é ignorado.
-- Formato hash dá erro com o nome do problema.
+- **Slices** viram dados por frame: cada slice vira uma chave com o seu nome (o retângulo `bounds`), valendo da chave `frame` até a próxima; um slice com `pivot` define também `pivot`.
+- `repeat` da tag: ausente ou `0` repete para sempre; `1` vira `once` (`bounceOnce` no `pingpong`); `N > 1` repete N vezes e para no fim da sequência (um `onLoop` do próprio `newFromAseprite` chama `pauseAtEnd`; se trocar `onLoop`, o limite se perde, e `opts.playMode` também o descarta). No `pingpong` o fim da sequência é o frame 2.
+- Formato hash (`JSON Data, Hash`): a tabela decodificada perde a ordem do arquivo, então os frames são ordenados pelo nome (`filename`, ou a chave), comparando sequências de dígitos como números (`hero 10` vem depois de `hero 9`). Vale também para `atlas.fromTexturePacker`. Os índices `from`/`to` das tags seguem essa ordem.
 
 Exemplo completo, com um decodificador JSON mínimo e um export de verdade: `love examples/aseprite` (slice `hurtbox` virando hitbox e slice `feet` virando pivô).
 
@@ -988,7 +989,7 @@ The library does not read files or decode JSON (to stay dependency-free and run 
 
 ### Aseprite
 
-Export as **JSON Data, Array** (not hash) with **Frame Tags** (define at least one tag, even for a single animation). The image path inside the JSON is ignored: pass the image yourself.
+Export as **JSON Data, Array** (or Hash, see below) with **Frame Tags** (define at least one tag, even for a single animation). The image path inside the JSON is ignored: pass the image yourself.
 
 ```lua
 local json = love.filesystem.read('hero.json')
@@ -999,8 +1000,9 @@ local anim = desAnim8.newFromAseprite(json, image, 'run', { decode = myJsonDecod
 - A `nil` tag uses every frame, forward.
 - Tag direction: `forward` is `loop`, `pingpong` is `bounce`, `reverse` reverses the frame list, `pingpong_reverse` reverses a `bounce`. `opts.playMode` overrides the mode. Other options go to the constructor.
 - Durations arrive in milliseconds and become seconds. The image size comes from `meta.size` (or from the image you pass).
-- **Slices** become per-frame data: each slice is a key under its name (the `bounds` rectangle), valid from its `frame` key until the next one; a slice with a `pivot` also sets `pivot`. The tag `repeat` field is ignored.
-- The hash form raises an error naming the problem.
+- **Slices** become per-frame data: each slice is a key under its name (the `bounds` rectangle), valid from its `frame` key until the next one; a slice with a `pivot` also sets `pivot`.
+- Tag `repeat`: absent or `0` repeats forever; `1` becomes `once` (`bounceOnce` for `pingpong`); `N > 1` plays N times and parks at the end of the sequence (an `onLoop` set by `newFromAseprite` itself calls `pauseAtEnd`; replacing `onLoop` loses the limit, and so does `opts.playMode`). For `pingpong` the end of the sequence is frame 2.
+- Hash form (`JSON Data, Hash`): a decoded table has lost the file order, so frames sort by name (`filename`, else the key), with digit runs compared as numbers (`hero 10` comes after `hero 9`). `atlas.fromTexturePacker` does the same. The tag `from`/`to` indices follow that order.
 
 A full example, with a minimal JSON decoder and a real-shaped export: `love examples/aseprite` (a `hurtbox` slice becoming a hitbox and a `feet` slice becoming the pivot).
 

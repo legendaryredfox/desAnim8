@@ -14,7 +14,7 @@
 - Per-frame data: `getFrameData`, `getWorldRect`, `setAutoPivot`, trim offsets and keyframe `transform` data with `setInterpolation`.
 - Rotated atlas frames: `rotated = true`/`'cw'`/`'ccw'` in frame records (TexturePacker "Allow rotation"); drawing, `getDimensions` and `getWorldRect` work on the upright sprite with any flip, scale, rotation and shear, verified pixel for pixel in LÖVE.
 - Atlases: `newFramesFromRecords`, `atlas.fromTexturePacker`, `atlas.fromStarling`, `atlas.fromAseprite`.
-- Aseprite: `newFromAseprite` (tags, directions, slices as frame data) and `newSetFromAseprite`.
+- Aseprite: `newFromAseprite` (tags, directions, `repeat`, slices as frame data) and `newSetFromAseprite`; the hash export form works for Aseprite and TexturePacker (frames sort by name, digit runs as numbers).
 - Sheet tools: `scanBounds`, `dataFromLists`, `sliceByAlpha`, `newQuadsFromRects`.
 - Render style: `setColor`, `setAlpha`, `setBlendMode`, `setShader`, `flash`, `faceTowards`, `setDefaultFacing`, `setPixelSnap`, `setTrail`/`getTrail`, `setOnion`, `desAnim8.shaders` (GLSL sources).
 - Debugging: `drawBounds`, `desAnim8.debug.drawTimeline`, `desAnim8.debug.scrub`.

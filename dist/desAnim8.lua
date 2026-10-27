@@ -2350,7 +2350,48 @@ end
 
 local atlas = {}
 
-local HASH_FORM = 'expected the array form of the export (JSON Array), got the hash form'
+-- Digit runs compare as numbers, so "hero 10" sorts after "hero 9".
+local function naturalLess(a, b)
+    local ia, ib = 1, 1
+    while ia <= #a and ib <= #b do
+        local da, db = a:match('^%d+', ia), b:match('^%d+', ib)
+        if da and db then
+            local na, nb = tonumber(da), tonumber(db)
+            if na ~= nb then return na < nb end
+            ia, ib = ia + #da, ib + #db
+        else
+            local ca, cb = a:sub(ia, ia), b:sub(ib, ib)
+            if ca ~= cb then return ca < cb end
+            ia, ib = ia + 1, ib + 1
+        end
+    end
+    local restA, restB = #a - ia, #b - ib
+    if restA ~= restB then return restA < restB end
+    return a < b
+end
+
+-- The frames of an export as a list, plus the names when it is the hash form
+-- (JSON Hash). A decoded hash has lost the file order, so frames sort by name
+-- (the `filename` field, else the key), which matches the default naming of
+-- Aseprite and TexturePacker. `level` is relative to the caller.
+local function frameList(frames, who, level)
+    if frames[1] ~= nil then return frames, nil end
+    local entries = {}
+    for key, f in pairs(frames) do
+        if type(key) ~= 'string' then
+            error(who .. ': a hash-form export needs string keys, got ' .. type(key), level + 1)
+        end
+        entries[#entries + 1] = { name = type(f) == 'table' and f.filename or key, key = key, f = f }
+    end
+    if #entries == 0 then error(who .. ': the export has no frames', level + 1) end
+    table.sort(entries, function(a, b)
+        if a.name ~= b.name then return naturalLess(a.name, b.name) end
+        return a.key < b.key
+    end)
+    local list, names = {}, {}
+    for i, e in ipairs(entries) do list[i], names[i] = e.f, e.name end
+    return list, names
+end
 
 -- TexturePacker "JSON (Array)" export, already decoded. Returns records, the
 -- image width and the image height (from meta.size, when present).
@@ -2362,19 +2403,18 @@ function atlas.fromTexturePacker(decoded)
     if type(decoded) ~= 'table' or type(decoded.frames) ~= 'table' then
         error('fromTexturePacker: expected a decoded export table with a frames list', 2)
     end
-    local frames = decoded.frames
-    if frames[1] == nil then
-        error('fromTexturePacker: ' .. (next(frames) ~= nil and HASH_FORM or 'the export has no frames'), 2)
-    end
+    local frames, names = frameList(decoded.frames, 'fromTexturePacker', 2)
     local records = {}
     for i, f in ipairs(frames) do
         local fr, src, size = f.frame, f.spriteSourceSize, f.sourceSize
-        if type(fr) ~= 'table' then error(('fromTexturePacker: frame %d has no frame rectangle'):format(i), 2) end
+        if type(fr) ~= 'table' then
+            error(('fromTexturePacker: frame %s has no frame rectangle'):format(names and ('%q'):format(names[i]) or i), 2)
+        end
         records[i] = {
             x = fr.x, y = fr.y, w = fr.w, h = fr.h,
             trimX = src and src.x or 0, trimY = src and src.y or 0,
             sourceW = size and size.w or fr.w, sourceH = size and size.h or fr.h,
-            name = f.filename, rotated = f.rotated,
+            name = names and names[i] or f.filename, rotated = f.rotated,
             duration = f.duration and f.duration / 1000 or nil,
         }
     end
@@ -2413,26 +2453,36 @@ local function parseAseprite(decoded, level)
     if type(decoded) ~= 'table' or type(decoded.frames) ~= 'table' then
         error('fromAseprite: expected a decoded export table with a frames list', level)
     end
-    local frames = decoded.frames
-    if frames[1] == nil then
-        error('fromAseprite: ' .. (next(frames) ~= nil and HASH_FORM or 'the export has no frames'), level)
-    end
+    local frames, names = frameList(decoded.frames, 'fromAseprite', level)
     local records = {}
     for i, f in ipairs(frames) do
         local fr, src, size = f.frame, f.spriteSourceSize, f.sourceSize
-        if type(fr) ~= 'table' then error(('fromAseprite: frame %d has no frame rectangle'):format(i), level) end
+        if type(fr) ~= 'table' then
+            error(('fromAseprite: frame %s has no frame rectangle'):format(names and ('%q'):format(names[i]) or i), level)
+        end
         records[i] = {
             x = fr.x, y = fr.y, w = fr.w, h = fr.h,
             trimX = src and src.x or 0, trimY = src and src.y or 0,
             sourceW = size and size.w or fr.w, sourceH = size and size.h or fr.h,
-            name = f.filename, rotated = f.rotated,
+            name = names and names[i] or f.filename, rotated = f.rotated,
             duration = (f.duration or 100) / 1000,
         }
     end
     local meta = decoded.meta or {}
     local tags = {}
     for i, t in ipairs(meta.frameTags or {}) do
-        tags[i] = { name = t.name, from = t.from + 1, to = t.to + 1, direction = t.direction or 'forward' }
+        -- Aseprite writes `repeat` as a string; 0 or absent means forever.
+        local count = t['repeat']
+        if count ~= nil then
+            count = tonumber(count)
+            if count == nil or count < 0 or count ~= math.floor(count) or count == math.huge then
+                error(('fromAseprite: tag %q has an invalid repeat %s'):format(
+                    tostring(t.name), tostring(t['repeat'])), level)
+            end
+            if count == 0 then count = nil end
+        end
+        tags[i] = { name = t.name, from = t.from + 1, to = t.to + 1, direction = t.direction or 'forward',
+                    repeatCount = count }
     end
     return records, meta.size and meta.size.w, meta.size and meta.size.h, tags, meta.slices or {}
 end
@@ -2454,6 +2504,8 @@ local ASEPRITE_DIRECTIONS = { forward = true, reverse = true, pingpong = true, p
 -- tag: tag name; nil takes every frame, forward. Frame order and play mode come
 -- from the tag direction (opts.playMode overrides the mode). Slices become frame
 -- data (a slice with a pivot also sets `pivot`). Other opts go to the constructor.
+-- A tag `repeat` of 1 plays once; N > 1 parks at the end after N plays through an
+-- `onLoop` hook (opts.playMode drops the limit).
 -- The library never reads files or decodes JSON itself.
 ---@param source table|string decoded export, or JSON text with opts.decode
 ---@param image love.Texture?
@@ -2488,7 +2540,7 @@ local function newFromAseprite(source, image, tag, opts)
         end
     end
 
-    local from, to, direction = 1, #records, 'forward'
+    local from, to, direction, repeatCount = 1, #records, 'forward', nil
     if tag ~= nil then
         local found
         for _, t in ipairs(tags) do
@@ -2500,7 +2552,7 @@ local function newFromAseprite(source, image, tag, opts)
             error(('newFromAseprite: no tag %q; the export has: %s'):format(
                 tostring(tag), #names > 0 and table.concat(names, ', ') or '(none)'), 2)
         end
-        from, to, direction = found.from, found.to, found.direction
+        from, to, direction, repeatCount = found.from, found.to, found.direction, found.repeatCount
         if from < 1 or to > #records or from > to then
             error(('newFromAseprite: tag %q has an invalid frame range'):format(tostring(tag)), 2)
         end
@@ -2535,8 +2587,18 @@ local function newFromAseprite(source, image, tag, opts)
         end
     end
     ctor.data = next(data) ~= nil and data or nil
-    local mode = playMode or ((direction == 'pingpong' or direction == 'pingpong_reverse') and 'bounce' or 'loop')
+    local pingpong = direction == 'pingpong' or direction == 'pingpong_reverse'
+    local mode = playMode
+    if not mode then
+        if repeatCount == 1 then mode = pingpong and 'bounceOnce' or 'once'
+        else mode = pingpong and 'bounce' or 'loop' end
+    end
     local anim = build(image, quads, durations, mode, ctor)
+    if repeatCount and repeatCount > 1 and not playMode then
+        anim.onLoop = function(a)
+            if a:getLoopCount() >= repeatCount then a:pauseAtEnd() end
+        end
+    end
     return anim
 end
 

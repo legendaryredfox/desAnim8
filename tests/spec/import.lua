@@ -13,7 +13,7 @@ test('atlas adapters: TexturePacker array, hash form, Starling', function()
     local records, iw, ih = desAnim8.atlas.fromTexturePacker(tp)
     eq(#records, 1); eq(iw, 64); eq(ih, 32)
     eq(records[1].trimX, 2); eq(records[1].trimY, 1); eq(records[1].sourceW, 16); eq(records[1].name, 'a')
-    throws(function() desAnim8.atlas.fromTexturePacker({ frames = { a = {} }, meta = {} }) end, 'array')
+    throws(function() desAnim8.atlas.fromTexturePacker({ frames = { a = {} }, meta = {} }) end, 'frame "a"')
     local st = desAnim8.atlas.fromStarling({
         { name = 'x', x = 4, y = 5, width = 8, height = 9, frameX = -2, frameY = -1, frameWidth = 16, frameHeight = 16 },
     })
@@ -56,10 +56,102 @@ test('aseprite: decoder callback, errors', function()
     eq(a:getFrameCount(), 2)
     throws(function() desAnim8.newFromAseprite('JSON TEXT', IMG, 'idle') end, 'decode')
     throws(function() desAnim8.newFromAseprite(ASE, IMG, 'nope') end, 'idle')
-    throws(function() desAnim8.newFromAseprite({ frames = { f0 = {} }, meta = {} }, IMG, nil) end, 'Array')
+    throws(function() desAnim8.newFromAseprite({ frames = { f0 = {} }, meta = {} }, IMG, nil) end, 'frame "f0"')
     throws(function() desAnim8.newFromAseprite(5, IMG, 'idle') end, 'source')
     local once = desAnim8.newFromAseprite(ASE, IMG, 'idle', { playMode = 'once' })
     eq(once:getPlayMode(), 'once')
+end)
+
+local function hashExport(count, reorder)
+    local frames, names = {}, {}
+    for i = 0, count - 1 do
+        local key = ('hero %d.aseprite'):format(i)
+        frames[key] = { frame = { x = i * 16, y = 0, w = 16, h = 16 }, duration = 100 + i,
+            spriteSourceSize = { x = 0, y = 0, w = 16, h = 16 }, sourceSize = { w = 16, h = 16 } }
+        names[#names + 1] = key
+    end
+    return {
+        frames = frames,
+        meta = { size = { w = count * 16, h = 16 }, frameTags = { { name = 'all', from = 0, to = count - 1, direction = 'forward' } } },
+    }
+end
+
+test('hash-form exports: frames sort by name with numbers in numeric order', function()
+    local export = hashExport(12)
+    local anim = desAnim8.newFromAseprite(export, IMG, 'all')
+    eq(anim:getFrameCount(), 12)
+    eq(viewportXs(anim), '0,16,32,48,64,80,96,112,128,144,160,176', 'hero 10 follows hero 9')
+    near(anim._durations[11], 0.110, 'durations follow the same order')
+    local records, iw, ih = desAnim8.atlas.fromAseprite(export)
+    eq(records[11].name, 'hero 10.aseprite'); eq(iw, 192); eq(ih, 16)
+
+    local tp = { frames = {
+        ['walk_10'] = { frame = { x = 10, y = 0, w = 8, h = 8 } },
+        ['walk_2']  = { frame = { x = 2,  y = 0, w = 8, h = 8 } },
+        ['walk_02'] = { frame = { x = 3,  y = 0, w = 8, h = 8 } },
+        ['walk']    = { frame = { x = 0,  y = 0, w = 8, h = 8 } },
+    }, meta = { size = { w = 64, h = 8 } } }
+    local recs = desAnim8.atlas.fromTexturePacker(tp)
+    eq(recs[1].name, 'walk'); eq(recs[2].name, 'walk_02'); eq(recs[3].name, 'walk_2'); eq(recs[4].name, 'walk_10')
+    eq(recs[1].x, 0); eq(recs[4].x, 10)
+
+    local explicit = { frames = { b = { filename = 'a2', frame = { x = 1, y = 0, w = 8, h = 8 } },
+                                  a = { filename = 'a10', frame = { x = 2, y = 0, w = 8, h = 8 } } },
+                       meta = { size = { w = 8, h = 8 } } }
+    eq(desAnim8.atlas.fromAseprite(explicit)[1].name, 'a2', 'an explicit filename wins over the key')
+    throws(function() desAnim8.atlas.fromAseprite({ frames = { [2] = {}, [5] = {} }, meta = {} }) end, 'string keys')
+end)
+
+local function repeatExport(direction, count)
+    return { frames = ASE.frames, meta = { size = ASE.meta.size, frameTags = {
+        { name = 't', from = 0, to = 2, direction = direction, ['repeat'] = count },
+    } } }
+end
+
+test('aseprite: tag repeat plays a finite number of times', function()
+    for _, infinite in ipairs({ 0, '0' }) do
+        local a = desAnim8.newFromAseprite(repeatExport('forward', infinite), IMG, 't')
+        eq(a:getPlayMode(), 'loop'); eq(a.onLoop, nil)
+    end
+    local a = desAnim8.newFromAseprite(repeatExport('forward'), IMG, 't')
+    eq(a:getPlayMode(), 'loop')
+
+    local once = desAnim8.newFromAseprite(repeatExport('forward', '1'), IMG, 't')
+    eq(once:getPlayMode(), 'once')
+    local pp = desAnim8.newFromAseprite(repeatExport('pingpong', 1), IMG, 't')
+    eq(pp:getPlayMode(), 'bounceOnce')
+    pp:update(10)
+    eq(pp.currentFrame, 1); eq(pp.status, 'paused'); eq(pp:isFinished(), true)
+
+    local three = desAnim8.newFromAseprite(repeatExport('forward', '3'), IMG, 't')
+    eq(three:getPlayMode(), 'loop')
+    local total = three:getDuration()
+    three:update(total * 2 - 0.01)
+    eq(three.status, 'playing', 'still in the second play')
+    three:update(0.02)
+    eq(three.status, 'playing', 'third play started')
+    three:update(total - 0.01 + 0.001)
+    eq(three.status, 'paused', 'parked after three plays')
+    eq(three.currentFrame, 3)
+    eq(three:getLoopCount(), 3)
+
+    three:reset(); three:resume()
+    three:update(total * 2.5)
+    eq(three.status, 'playing', 'reset restarts the count')
+    local twin = three:clone()
+    twin:update(total * 3)
+    eq(twin.status, 'paused', 'a clone keeps the limit')
+
+    local big = desAnim8.newFromAseprite(repeatExport('forward', 2), IMG, 't')
+    big:update(total * 50)
+    eq(big.status, 'paused'); eq(big.currentFrame, 3, 'a huge dt still parks at the end')
+
+    throws(function() desAnim8.newFromAseprite(repeatExport('forward', -1), IMG, 't') end, 'repeat')
+    throws(function() desAnim8.newFromAseprite(repeatExport('forward', 1.5), IMG, 't') end, 'repeat')
+    throws(function() desAnim8.newFromAseprite(repeatExport('forward', 'x'), IMG, 't') end, 'repeat')
+    local over = desAnim8.newFromAseprite(repeatExport('forward', 2), IMG, 't', { playMode = 'bounce' })
+    eq(over:getPlayMode(), 'bounce', 'an explicit playMode still wins')
+    eq(over.onLoop, nil, 'and drops the repeat limit')
 end)
 
 test('scanBounds finds the opaque area of each frame', function()
