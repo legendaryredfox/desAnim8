@@ -63,12 +63,11 @@ test('aseprite: decoder callback, errors', function()
 end)
 
 local function hashExport(count, reorder)
-    local frames, names = {}, {}
+    local frames = {}
     for i = 0, count - 1 do
         local key = ('hero %d.aseprite'):format(i)
         frames[key] = { frame = { x = i * 16, y = 0, w = 16, h = 16 }, duration = 100 + i,
             spriteSourceSize = { x = 0, y = 0, w = 16, h = 16 }, sourceSize = { w = 16, h = 16 } }
-        names[#names + 1] = key
     end
     return {
         frames = frames,

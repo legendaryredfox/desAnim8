@@ -1,10 +1,10 @@
 rockspec_format = '3.0'
 package = 'desanim8'
-version = '0.10.0-1'
+version = '1.0.0-1'
 
 source = {
     url = 'git+https://github.com/legendaryredfox/desAnim8.git',
-    tag = 'v0.10.0',
+    tag = 'v1.0.0',
 }
 
 description = {

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0
+
+First stable release. The API of 0.10.0 is unchanged and is now covered by the compatibility promise: no breaking change before 2.0.
+
+### Changed
+- The README method reference lists the methods of `Grid`, `Set`, `Composite`, `Batch` and `Watcher`.
+- `Grid:getFrames` no longer reuses a local for two types (a LuaLS finding).
+
+### Fixed
+- Unused variable in the Aseprite hash-export test helper (luacheck).
+
 ## 0.10.0
 
 ### Added

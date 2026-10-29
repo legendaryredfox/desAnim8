@@ -4,7 +4,7 @@
 local PKG = ... or 'desAnim8'
 
 local desAnim8 = {
-    _VERSION     = 'desAnim8 v0.10.0',
+    _VERSION     = 'desAnim8 v1.0.0',
     _DESCRIPTION = 'An animation library for LÖVE 11.5 games',
     _URL         = 'https://github.com/legendaryredfox/desAnim8',
     _THANKS      = 'All thanks, recognition and incentives should go to https://github.com/kikito',
