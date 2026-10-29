@@ -4,8 +4,6 @@ local Animation = require(PKG .. '.animation').Animation
 local atlas = require(PKG .. '.atlas')
 local newFromAseprite, parseAseprite = atlas.newFromAseprite, atlas._parseAseprite
 
----@class desAnim8.Set
----@field onChange (fun(set: desAnim8.Set, from: string, to: string))?
 local Set = {}
 Set.__index = Set
 
@@ -14,9 +12,6 @@ Set.__index = Set
 -- alphabetical order. Playback controls act on the current clip; the style setters
 -- (setColor, setShader, ...) apply to every clip. Flip state follows the sprite
 -- from clip to clip.
----@param clips table<string, desAnim8.Animation>
----@param initial string?
----@return desAnim8.Set
 local function newSet(clips, initial)
     if type(clips) ~= 'table' or next(clips) == nil then
         error('newSet: clips must be a non-empty table of name -> animation', 2)
@@ -41,9 +36,6 @@ end
 -- Switches clip (the new one starts over unless opts.keepPhase carries the
 -- current phase across; opts.restart replays the clip that is already current).
 -- Clears any queued clip and calls set.onChange(set, from, to) on a change.
----@param name string
----@param opts {keepPhase: boolean?, restart: boolean?}?
----@return desAnim8.Set
 function Set:play(name, opts)
     local nextClip = self._clips[name]
     if not nextClip then error(('play: unknown clip %q'):format(tostring(name)), 2) end
@@ -62,8 +54,6 @@ end
 
 -- Plays `name` when the current clip finishes (once modes) or completes its
 -- current loop (looping modes).
----@param name string
----@return desAnim8.Set
 function Set:queue(name)
     if not self._clips[name] then error(('queue: unknown clip %q'):format(tostring(name)), 2) end
     self._queued = name
@@ -72,9 +62,6 @@ end
 
 -- Declares that `name` hands over to `nextName` whenever it finishes (once modes)
 -- or completes a loop, unless another clip was queued. nil clears the rule.
----@param name string
----@param nextName string?
----@return desAnim8.Set
 function Set:setNext(name, nextName)
     if not self._clips[name] then error(('setNext: unknown clip %q'):format(tostring(name)), 2) end
     if nextName ~= nil and not self._clips[nextName] then
@@ -85,7 +72,6 @@ function Set:setNext(name, nextName)
     return self
 end
 
----@param dt number
 function Set:update(dt)
     local clip = self._cur
     local loops = clip._loops
@@ -95,14 +81,10 @@ function Set:update(dt)
 end
 
 -- Returns the current animation and its name.
----@return desAnim8.Animation
----@return string name
 function Set:getCurrent()
     return self._cur, self._name
 end
 
----@param name string
----@return desAnim8.Animation?
 function Set:getClip(name)
     return self._clips[name]
 end
@@ -138,10 +120,6 @@ end
 -- One clip per frame tag of an Aseprite export (decoded table, or a JSON string
 -- with opts.decode). opts.initial names the starting clip (default: the first
 -- tag in the file); the other opts go to newFromAseprite.
----@param source table|string
----@param image love.Texture?
----@param opts table?
----@return desAnim8.Set
 local function newSetFromAseprite(source, image, opts)
     local clipOpts, initial, decoded = {}, nil, source
     for k, v in pairs(opts or {}) do

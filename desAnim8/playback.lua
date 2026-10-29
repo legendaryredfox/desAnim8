@@ -9,11 +9,8 @@ local PAUSE_AT_END, clock = timing.PAUSE_AT_END, timing.clock
 local applyRegion, displayTime, locate, timerFor = timing.applyRegion, timing.displayTime, timing.locate, timing.timerFor
 local callHook, fireFrames, fireMarkers = events.callHook, events.fireFrames, events.fireMarkers
 
----@class desAnim8.Animation
 local Animation = {}
 
----@param dt number
----@return nil
 -- True when update can take its shortcut: forward playback at speed 1 with no
 -- hooks, markers, freeze, flash, easing, step, loop range or tick mode in play.
 -- The answer is cached in _plain, and every method that changes one of those
@@ -130,65 +127,51 @@ function Animation:update(dt)
 end
 
 -- Advances by whole ticks; for animations built with { ticks = true }.
----@param n integer?
----@return nil
 function Animation:tick(n)
     self:update(n or 1)
 end
 
 -- Returns the current 1-based frame index and its Quad.
----@return integer index
----@return love.Quad quad
 function Animation:getCurrentFrame()
     return self.currentFrame, self.frames[self.currentFrame]
 end
 
----@return integer
 function Animation:getCurrentFrameNumber()
     return self.currentFrame
 end
 
----@return integer w
----@return integer h
 function Animation:getDimensions()
     local _, _, w, h = self.frames[self.currentFrame]:getViewport()
     if self._rotated and self._rotated[self.currentFrame] then return h, w end
     return w, h
 end
 
----@return integer
 function Animation:getFrameCount()
     return #self.frames
 end
 
 -- Length in seconds of one full play-through. For 'bounce' modes that includes
 -- the return trip.
----@return number seconds
 function Animation:getDuration()
     return self._totalDuration
 end
 
----@return desAnim8.PlayMode
 function Animation:getPlayMode()
     return self.playMode
 end
 
 -- Seconds left until the end of the sequence.
----@return number seconds
 function Animation:getRemainingTime()
     if self._speed < 0 then return self._timer end
     return self._totalDuration - self._timer
 end
 
 -- Position inside one play-through, 0 (start) to 1 (end).
----@return number phase 0..1
 function Animation:getPhase()
     return self._timer / self._totalDuration
 end
 
 -- Jumps to a position inside one play-through; values outside 0..1 are clamped.
----@param p number clamped to 0..1
----@return nil
 function Animation:setPhase(p)
     if type(p) ~= 'number' or p ~= p then
         error(('setPhase: phase must be a number, got %s'):format(tostring(p)), 2)
@@ -199,14 +182,12 @@ function Animation:setPhase(p)
 end
 
 -- Completed play-throughs since construction or reset().
----@return integer
 function Animation:getLoopCount()
     return self._loops
 end
 
 -- True once a 'once'/'bounceOnce' (or released loop-range) animation has reached
 -- its end, which is the start when it plays backwards.
----@return boolean
 function Animation:isFinished()
     if not (PAUSE_AT_END[self.playMode] or self._released) then return false end
     if self._speed >= 0 then return self._timer >= self._totalDuration end
@@ -273,8 +254,6 @@ function Animation:reset()
     self.status       = 'playing'
 end
 
----@param n integer
----@return nil
 function Animation:gotoFrame(n)
     if type(n) ~= 'number' or n ~= math.floor(n) then
         error(('gotoFrame: frame must be an integer, got %s'):format(tostring(n)), 2)
@@ -295,12 +274,10 @@ function Animation:gotoFrame(n)
     end
 end
 
----@return boolean
 function Animation:isPlaying()
     return self.status == 'playing'
 end
 
----@return boolean
 function Animation:isPaused()
     return self.status == 'paused'
 end

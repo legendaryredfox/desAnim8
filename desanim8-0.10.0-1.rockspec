@@ -49,6 +49,7 @@ build = {
         ['desAnim8.util'] = 'desAnim8/util.lua',
         ['desAnim8.watcher'] = 'desAnim8/watcher.lua',
     },
+    copy_directories = { 'types' },
 }
 
 test = {

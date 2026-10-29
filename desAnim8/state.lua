@@ -5,14 +5,12 @@ local timing = require(PKG .. '.timing')
 local isInteger = util.isInteger
 local applyRegion, applySequence, locate = timing.applyRegion, timing.applySequence, timing.locate
 
----@class desAnim8.Animation
 local Animation = {}
 
 local STATE_VERSION = 1
 
 -- Plain-table snapshot of the playback state, for save games, replays and
 -- rollback. Restore it with setState on an animation built the same way.
----@return table
 function Animation:getState()
     local state = {
         v        = STATE_VERSION,
@@ -34,8 +32,6 @@ function Animation:getState()
     return state
 end
 
----@param s table
----@return desAnim8.Animation
 function Animation:setState(s)
     if type(s) ~= 'table' then error('setState: state must be a table from getState()', 2) end
     if s.v ~= STATE_VERSION then

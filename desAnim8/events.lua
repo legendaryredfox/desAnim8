@@ -1,7 +1,6 @@
 -- Hooks, frame callbacks and time markers. Internal helpers plus the Animation
 -- methods that register callbacks.
 
----@class desAnim8.Animation
 local Animation = {}
 
 -- Resolves a hook field that holds a function or the name of a method.
@@ -85,9 +84,6 @@ local function checkFrameNumber(self, n, what)
 end
 
 -- Calls fn(anim, frame) every time frame `n` becomes the current frame.
----@param n integer
----@param fn fun(anim: desAnim8.Animation, frame: integer)
----@return desAnim8.Animation
 function Animation:onFrame(n, fn)
     checkFrameNumber(self, n, 'onFrame')
     if type(fn) ~= 'function' then error('onFrame: expected a function', 2) end
@@ -100,9 +96,6 @@ function Animation:onFrame(n, fn)
 end
 
 -- Removes one callback, or every callback of the frame when fn is omitted.
----@param n integer
----@param fn function?
----@return desAnim8.Animation
 function Animation:offFrame(n, fn)
     checkFrameNumber(self, n, 'offFrame')
     local list = self._onFrame and self._onFrame[n]
@@ -119,9 +112,6 @@ end
 
 -- Calls fn(anim, t) when playback crosses `t` seconds into the sequence. A
 -- marker fires at most once per update.
----@param t number seconds into the sequence
----@param fn fun(anim: desAnim8.Animation, t: number)
----@return desAnim8.Animation
 function Animation:addMarker(t, fn)
     if type(t) ~= 'number' or not (t >= 0 and t <= self._totalDuration) then
         error(('addMarker: marker time must be in [0,%s], got %s'):format(
@@ -134,7 +124,6 @@ function Animation:addMarker(t, fn)
     return self
 end
 
----@return desAnim8.Animation
 function Animation:clearMarkers()
     self._markers = nil
     self._plain = nil

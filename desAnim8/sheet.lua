@@ -5,10 +5,6 @@
 -- ({ x = 0, y = 0, w = 0, h = 0 } for an empty frame). `imageData` is anything
 -- with getPixel(x, y) -> r, g, b, a; pixels with alpha above `threshold` (default 0)
 -- count as opaque.
----@param quads love.Quad[]
----@param imageData love.ImageData
----@param threshold number?
----@return desAnim8.Rect[]
 local function scanBounds(quads, imageData, threshold)
     threshold = threshold or 0
     local out = {}
@@ -34,8 +30,6 @@ local function scanBounds(quads, imageData, threshold)
 end
 
 -- Turns { name = listPerFrame } into the frame-indexed table the `data` option takes.
----@param lists table<string, any[]>
----@return table<integer, table<string, any>>
 local function dataFromLists(lists)
     local data = {}
     for name, list in pairs(lists) do
@@ -52,9 +46,6 @@ end
 -- opts: threshold (alpha above it is opaque, default 0), mergeGap (join regions at
 -- most this many empty pixels apart, default: no merging), minSize (drop regions
 -- narrower or shorter than this).
----@param imageData love.ImageData
----@param opts {threshold: number?, mergeGap: integer?, minSize: integer?}?
----@return desAnim8.Rect[]
 local function sliceByAlpha(imageData, opts)
     opts = opts or {}
     local threshold = opts.threshold or 0
@@ -147,10 +138,6 @@ local function sliceByAlpha(imageData, opts)
 end
 
 -- Quads for a list of { x, y, w, h } rectangles (for example from sliceByAlpha).
----@param rects desAnim8.Rect[]
----@param imageWidth integer
----@param imageHeight integer
----@return love.Quad[]
 local function newQuadsFromRects(rects, imageWidth, imageHeight)
     local quads = {}
     for i, r in ipairs(rects) do

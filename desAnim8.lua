@@ -34,37 +34,6 @@ local desAnim8 = {
     ]]
 }
 
----@alias desAnim8.PlayMode 'loop'|'once'|'bounce'|'bounceOnce'|'random'
----@alias desAnim8.Durations number|number[]|table<string, number>
----@alias desAnim8.Easing 'linear'|'inQuad'|'outQuad'|'inOutQuad'|'inCubic'|'outCubic'|'inOutCubic'|fun(t: number): number
-
----@class desAnim8.Options
----@field ticks boolean? integer durations and steps, exact on every platform
----@field weights number[]? per-frame weights for the 'random' mode
----@field jitter number? random duration spread in [0,1), per instance
----@field rng (fun(): number)? random source returning [0,1)
----@field randomLength integer? length of the generated 'random' order (default 32)
----@field data table<integer, table<string, any>>? per-frame data: hitbox, pivot, trim, transform, ...
-
----@class desAnim8.FrameRecord
----@field x number
----@field y number
----@field w number
----@field h number
----@field trimX number?
----@field trimY number?
----@field sourceW number?
----@field sourceH number?
----@field name string?
----@field duration number? seconds
----@field rotated (boolean|'cw'|'ccw')? stored turned 90 degrees (true is clockwise)
-
----@class desAnim8.Rect
----@field x number
----@field y number
----@field w number
----@field h number
-
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 
 local function load(name)

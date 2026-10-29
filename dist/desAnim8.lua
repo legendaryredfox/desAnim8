@@ -369,8 +369,6 @@ end
 -- Global multiplier applied to every animation's update (slow motion, pause menus).
 local clock = { scale = 1 }
 
----@param scale number >= 0
----@return nil
 local function setTimeScale(scale)
     if type(scale) ~= 'number' or not (scale >= 0) or scale == math.huge then
         error(('time scale must be a finite number >= 0, got %s'):format(tostring(scale)), 2)
@@ -378,7 +376,6 @@ local function setTimeScale(scale)
     clock.scale = scale
 end
 
----@return number
 local function getTimeScale()
     return clock.scale
 end
@@ -532,7 +529,6 @@ __modules['desAnim8.events'] = function(...)
 -- Hooks, frame callbacks and time markers. Internal helpers plus the Animation
 -- methods that register callbacks.
 
----@class desAnim8.Animation
 local Animation = {}
 
 -- Resolves a hook field that holds a function or the name of a method.
@@ -616,9 +612,6 @@ local function checkFrameNumber(self, n, what)
 end
 
 -- Calls fn(anim, frame) every time frame `n` becomes the current frame.
----@param n integer
----@param fn fun(anim: desAnim8.Animation, frame: integer)
----@return desAnim8.Animation
 function Animation:onFrame(n, fn)
     checkFrameNumber(self, n, 'onFrame')
     if type(fn) ~= 'function' then error('onFrame: expected a function', 2) end
@@ -631,9 +624,6 @@ function Animation:onFrame(n, fn)
 end
 
 -- Removes one callback, or every callback of the frame when fn is omitted.
----@param n integer
----@param fn function?
----@return desAnim8.Animation
 function Animation:offFrame(n, fn)
     checkFrameNumber(self, n, 'offFrame')
     local list = self._onFrame and self._onFrame[n]
@@ -650,9 +640,6 @@ end
 
 -- Calls fn(anim, t) when playback crosses `t` seconds into the sequence. A
 -- marker fires at most once per update.
----@param t number seconds into the sequence
----@param fn fun(anim: desAnim8.Animation, t: number)
----@return desAnim8.Animation
 function Animation:addMarker(t, fn)
     if type(t) ~= 'number' or not (t >= 0 and t <= self._totalDuration) then
         error(('addMarker: marker time must be in [0,%s], got %s'):format(
@@ -665,7 +652,6 @@ function Animation:addMarker(t, fn)
     return self
 end
 
----@return desAnim8.Animation
 function Animation:clearMarkers()
     self._markers = nil
     self._plain = nil
@@ -692,11 +678,8 @@ local PAUSE_AT_END, clock = timing.PAUSE_AT_END, timing.clock
 local applyRegion, displayTime, locate, timerFor = timing.applyRegion, timing.displayTime, timing.locate, timing.timerFor
 local callHook, fireFrames, fireMarkers = events.callHook, events.fireFrames, events.fireMarkers
 
----@class desAnim8.Animation
 local Animation = {}
 
----@param dt number
----@return nil
 -- True when update can take its shortcut: forward playback at speed 1 with no
 -- hooks, markers, freeze, flash, easing, step, loop range or tick mode in play.
 -- The answer is cached in _plain, and every method that changes one of those
@@ -813,65 +796,51 @@ function Animation:update(dt)
 end
 
 -- Advances by whole ticks; for animations built with { ticks = true }.
----@param n integer?
----@return nil
 function Animation:tick(n)
     self:update(n or 1)
 end
 
 -- Returns the current 1-based frame index and its Quad.
----@return integer index
----@return love.Quad quad
 function Animation:getCurrentFrame()
     return self.currentFrame, self.frames[self.currentFrame]
 end
 
----@return integer
 function Animation:getCurrentFrameNumber()
     return self.currentFrame
 end
 
----@return integer w
----@return integer h
 function Animation:getDimensions()
     local _, _, w, h = self.frames[self.currentFrame]:getViewport()
     if self._rotated and self._rotated[self.currentFrame] then return h, w end
     return w, h
 end
 
----@return integer
 function Animation:getFrameCount()
     return #self.frames
 end
 
 -- Length in seconds of one full play-through. For 'bounce' modes that includes
 -- the return trip.
----@return number seconds
 function Animation:getDuration()
     return self._totalDuration
 end
 
----@return desAnim8.PlayMode
 function Animation:getPlayMode()
     return self.playMode
 end
 
 -- Seconds left until the end of the sequence.
----@return number seconds
 function Animation:getRemainingTime()
     if self._speed < 0 then return self._timer end
     return self._totalDuration - self._timer
 end
 
 -- Position inside one play-through, 0 (start) to 1 (end).
----@return number phase 0..1
 function Animation:getPhase()
     return self._timer / self._totalDuration
 end
 
 -- Jumps to a position inside one play-through; values outside 0..1 are clamped.
----@param p number clamped to 0..1
----@return nil
 function Animation:setPhase(p)
     if type(p) ~= 'number' or p ~= p then
         error(('setPhase: phase must be a number, got %s'):format(tostring(p)), 2)
@@ -882,14 +851,12 @@ function Animation:setPhase(p)
 end
 
 -- Completed play-throughs since construction or reset().
----@return integer
 function Animation:getLoopCount()
     return self._loops
 end
 
 -- True once a 'once'/'bounceOnce' (or released loop-range) animation has reached
 -- its end, which is the start when it plays backwards.
----@return boolean
 function Animation:isFinished()
     if not (PAUSE_AT_END[self.playMode] or self._released) then return false end
     if self._speed >= 0 then return self._timer >= self._totalDuration end
@@ -956,8 +923,6 @@ function Animation:reset()
     self.status       = 'playing'
 end
 
----@param n integer
----@return nil
 function Animation:gotoFrame(n)
     if type(n) ~= 'number' or n ~= math.floor(n) then
         error(('gotoFrame: frame must be an integer, got %s'):format(tostring(n)), 2)
@@ -978,12 +943,10 @@ function Animation:gotoFrame(n)
     end
 end
 
----@return boolean
 function Animation:isPlaying()
     return self.status == 'playing'
 end
 
----@return boolean
 function Animation:isPaused()
     return self.status == 'paused'
 end
@@ -1005,7 +968,6 @@ local applyRegion, locate, resolveEasing = timing.applyRegion, timing.locate, ti
 local displayTime, timerFor, timerForDisplay = timing.displayTime, timing.timerFor, timing.timerForDisplay
 local assertTickDurations = options.assertTickDurations
 
----@class desAnim8.Animation
 local Animation = {}
 
 local function assertSpeedValue(self, v, what)
@@ -1018,8 +980,6 @@ local function assertSpeedValue(self, v, what)
 end
 
 -- Playback rate: 1 is normal, 2 doubles it, negative plays backwards, 0 holds.
----@param rate number negative plays backwards
----@return desAnim8.Animation
 function Animation:setSpeed(rate)
     assertSpeedValue(self, rate, 'setSpeed: speed')
     self._speed = rate
@@ -1027,14 +987,11 @@ function Animation:setSpeed(rate)
     return self
 end
 
----@return number
 function Animation:getSpeed()
     return self._speed
 end
 
 -- Sets the speed so one play-through lasts `seconds`; the direction is kept.
----@param seconds number
----@return desAnim8.Animation
 function Animation:fitDuration(seconds)
     if self._ticks then error('fitDuration: not available in ticks mode', 2) end
     if type(seconds) ~= 'number' or not (seconds > 0) or seconds == math.huge then
@@ -1047,8 +1004,6 @@ end
 
 -- Ignores updates for `seconds` of dt (hit-stop). Leftover dt in the same call
 -- advances normally.
----@param seconds number
----@return desAnim8.Animation
 function Animation:freeze(seconds)
     if type(seconds) ~= 'number' or not (seconds >= 0) or seconds == math.huge then
         error(('freeze: seconds must be a non-negative number, got %s'):format(tostring(seconds)), 2)
@@ -1063,8 +1018,6 @@ end
 
 -- Quantizes the displayed time to multiples of `seconds` (animating "on twos").
 -- nil turns it off.
----@param seconds number?
----@return desAnim8.Animation
 function Animation:setStep(seconds)
     if seconds ~= nil and (type(seconds) ~= 'number' or not (seconds > 0) or seconds == math.huge) then
         error(('setStep: step must be a positive number or nil, got %s'):format(tostring(seconds)), 2)
@@ -1077,8 +1030,6 @@ end
 
 -- Remaps time across the sequence. `easing` is a name from EASINGS, a function
 -- from [0,1] to [0,1] that never decreases, or nil for linear.
----@param easing desAnim8.Easing?
----@return desAnim8.Animation
 function Animation:setEasing(easing)
     self._ease = resolveEasing(easing, 'setEasing', 3)
     self._plain = nil
@@ -1087,8 +1038,6 @@ function Animation:setEasing(easing)
 end
 
 -- Jumps to a random point of the play-through, to keep crowds out of sync.
----@param rng (fun(): number)?
----@return nil
 function Animation:randomizeStart(rng)
     local v = (rng or math.random)()
     if type(v) ~= 'number' or not (v >= 0 and v <= 1) then
@@ -1098,8 +1047,6 @@ function Animation:randomizeStart(rng)
 end
 
 -- Switches the play mode, keeping the current frame where the new sequence has it.
----@param mode desAnim8.PlayMode
----@return desAnim8.Animation
 function Animation:setPlayMode(mode)
     if not VALID_MODES[mode] then
         error(('setPlayMode: unknown play mode %s; expected %s'):format(
@@ -1124,8 +1071,6 @@ end
 
 -- Replaces the durations (same formats as the constructor) keeping the position
 -- and how far into the current frame playback is.
----@param durations desAnim8.Durations
----@return desAnim8.Animation
 function Animation:setDurations(durations)
     local fresh = parseDurations(durations, #self.frames, 3)
     if self._ticks then assertTickDurations(fresh, 3) end
@@ -1145,9 +1090,6 @@ end
 
 -- Loop frames from..to (loop mode only): playback runs 1..to once, then keeps
 -- wrapping back to `from`. release() lets it run on to the end and finish.
----@param from integer
----@param to integer
----@return desAnim8.Animation
 function Animation:setLoopRange(from, to)
     if self.playMode ~= 'loop' then error('setLoopRange: only available in loop mode', 2) end
     local n = #self.frames
@@ -1159,14 +1101,12 @@ function Animation:setLoopRange(from, to)
     return self
 end
 
----@return desAnim8.Animation
 function Animation:clearLoopRange()
     self._loopFrom, self._loopTo, self._released = nil, nil, false
     applyRegion(self)
     return self
 end
 
----@return desAnim8.Animation
 function Animation:release()
     if not self._loopFrom then error('release: no loop range set (see setLoopRange)', 2) end
     self._released = true
@@ -1177,7 +1117,6 @@ end
 -- Inside a coroutine: yields until the animation finishes (once modes) or
 -- completes its next loop. Polls once per resume, so it works with any scheduler
 -- that resumes the coroutine every frame.
----@return nil
 function Animation:wait()
     local co, isMain = coroutine.running()
     if co == nil or isMain then error('wait: must be called inside a coroutine', 2) end
@@ -1196,14 +1135,11 @@ local timing = require(PKG .. '.timing')
 local neighbourPosition, frameProgress = timing.neighbourPosition, timing.frameProgress
 local EASINGS, resolveEasing = timing.EASINGS, timing.resolveEasing
 
----@class desAnim8.Animation
 local Animation = {}
 
 local IDENTITY_TRANSFORM = { x = 0, y = 0, r = 0, sx = 1, sy = 1 }
 local HALF_PI = math.pi / 2
 
----@return number
----@nodiscard
 function Animation:getFrameProgress()
     return frameProgress(self)
 end
@@ -1222,9 +1158,6 @@ end
 
 -- Blends keyframe `transform` data (see the data option) between frames instead
 -- of stepping. `easing` shapes the blend; default linear.
----@param enabled boolean
----@param easing desAnim8.Easing?
----@return desAnim8.Animation
 function Animation:setInterpolation(enabled, easing)
     if type(enabled) ~= 'boolean' then error('setInterpolation: expected a boolean', 2) end
     self._interp = enabled or nil
@@ -1239,16 +1172,6 @@ end
 -- A flip mirrors the sprite inside its (untrimmed) source frame of size W x H,
 -- so the drawn position stays put. With a trim offset (tx, ty) the quad is only
 -- part of that frame: the origin becomes ox - tx, or W - tx - ox once mirrored.
----@return love.Quad quad
----@return number? x
----@return number? y
----@return number? r
----@return number? sx
----@return number? sy
----@return number? ox
----@return number? oy
----@return number? kx
----@return number? ky
 function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
     local fh, fv = self.flippedH, self.flippedV
     -- _fancy: some feature beyond a plain frame is configured (trim, transforms,
@@ -1361,9 +1284,6 @@ end
 
 -- Value stored under `name` for a frame (default: the current one) through the
 -- `data` constructor option, or nil. Shared with clones; treat it as read only.
----@param name string
----@param frame integer?
----@return any
 function Animation:getFrameData(name, frame)
     local d = self._data and self._data[frame or self.currentFrame]
     return d and d[name]
@@ -1371,8 +1291,6 @@ end
 
 -- When on, ox and oy default to the frame's `pivot` data ({ x, y } in source
 -- frame pixels) wherever the caller leaves them out.
----@param enabled boolean
----@return desAnim8.Animation
 function Animation:setAutoPivot(enabled)
     if type(enabled) ~= 'boolean' then error('setAutoPivot: expected a boolean', 2) end
     self._autoPivot = enabled
@@ -1383,11 +1301,6 @@ end
 -- World-space rectangle of a { x, y, w, h } stored under `name` (for example a
 -- hitbox), given the same x, y, sx, sy, ox, oy you draw with. Honours the
 -- current flips; rotation is not supported. Returns x, y, w, h or nil.
----@param name string
----@return number? x
----@return number? y
----@return number? w
----@return number? h
 function Animation:getWorldRect(name, x, y, sx, sy, ox, oy)
     local f = self.currentFrame
     local rect = self:getFrameData(name, f)
@@ -1420,17 +1333,11 @@ function Animation:getWorldRect(name, x, y, sx, sy, ox, oy)
 end
 
 -- Adds the current frame (flip applied) to a SpriteBatch and returns its id.
----@param batch love.SpriteBatch
----@param ... number x, y, r, sx, sy, ox, oy, kx, ky
----@return integer id
 function Animation:addToBatch(batch, ...)
     return batch:add(self:getFrameInfo(...))
 end
 
 -- Rewrites sprite `id` of a SpriteBatch with the current frame.
----@param batch love.SpriteBatch
----@param id integer
----@param ... number x, y, r, sx, sy, ox, oy, kx, ky
 function Animation:setInBatch(batch, id, ...)
     return batch:set(id, self:getFrameInfo(...))
 end
@@ -1447,8 +1354,6 @@ local dbg = {
 }
 
 -- Segment bar of the whole sequence with a playhead, for debugging timing.
----@param anim desAnim8.Animation
----@return nil
 function dbg.drawTimeline(anim, x, y, w, h)
     local gfx = love.graphics
     local pr, pg, pb, pa = gfx.getColor()
@@ -1470,8 +1375,6 @@ end
 
 -- If the point (mx, my) is inside the timeline rectangle, pauses the animation
 -- on the matching phase and returns true.
----@param anim desAnim8.Animation
----@return boolean
 function dbg.scrub(anim, mx, my, x, y, w, h)
     if mx < x or mx > x + w or my < y or my > y + h then return false end
     anim:setPhase((mx - x) / w)
@@ -1492,7 +1395,6 @@ local dbg = require(PKG .. '.debug')
 local isInteger, flipFor = util.isInteger, util.flipFor
 local neighbourPosition = timing.neighbourPosition
 
----@class desAnim8.Animation
 local Animation = {}
 
 -- Frame info for another frame index of the same animation.
@@ -1597,9 +1499,6 @@ end
 -- With a bound image:    anim:draw(x, y [, r, sx, sy, ox, oy, kx, ky])
 -- Without one (image=nil): anim:draw(image, x, y [, ...]) -- the leading
 -- argument is the image to draw onto.
----@param a number|love.Texture x, or the image for an image-less animation
----@param b number y, or x for an image-less animation
----@param ... number r, sx, sy, ox, oy, kx, ky
 function Animation:draw(a, b, ...)
     if self.image ~= nil then
         if type(a) ~= 'number' then
@@ -1616,11 +1515,6 @@ end
 
 -- Tint multiplied into the sprite; call with no arguments to go back to the
 -- current graphics color. Values are 0..1.
----@param r number?
----@param g number?
----@param b number?
----@param a number?
----@return desAnim8.Animation
 function Animation:setColor(r, g, b, a)
     if r == nil then
         self._color = nil
@@ -1636,8 +1530,6 @@ function Animation:setColor(r, g, b, a)
     return self
 end
 
----@param a number
----@return desAnim8.Animation
 function Animation:setAlpha(a)
     if type(a) ~= 'number' then error('setAlpha: alpha must be a number (0..1)', 2) end
     local c = self._color
@@ -1646,9 +1538,6 @@ function Animation:setAlpha(a)
     return self
 end
 
----@param mode love.BlendMode?
----@param alphaMode love.BlendAlphaMode?
----@return desAnim8.Animation
 function Animation:setBlendMode(mode, alphaMode)
     if mode ~= nil and type(mode) ~= 'string' then error('setBlendMode: blend mode must be a string or nil', 2) end
     self._blend = mode and { mode, alphaMode } or nil
@@ -1657,9 +1546,6 @@ function Animation:setBlendMode(mode, alphaMode)
 end
 
 -- Draws with `shader`, sending the name -> value pairs in `uniforms` first.
----@param shader love.Shader?
----@param uniforms table<string, any>?
----@return desAnim8.Animation
 function Animation:setShader(shader, uniforms)
     if uniforms ~= nil and type(uniforms) ~= 'table' then error('setShader: uniforms must be a table', 2) end
     self._shader   = shader
@@ -1670,11 +1556,6 @@ end
 
 -- Overrides the tint for `seconds` of update time (hit flash). The tint is
 -- multiplicative, so a white flash needs desAnim8.shaders.whiteFlash.
----@param seconds number
----@param r number?
----@param g number?
----@param b number?
----@return desAnim8.Animation
 function Animation:flash(seconds, r, g, b)
     if type(seconds) ~= 'number' or not (seconds > 0) or seconds == math.huge then
         error(('flash: seconds must be a positive number, got %s'):format(tostring(seconds)), 2)
@@ -1687,8 +1568,6 @@ end
 
 -- Flips horizontally so the sprite faces the sign of dx (0 keeps the current
 -- side). Sheets are assumed to face right; see setDefaultFacing.
----@param dx number
----@return desAnim8.Animation
 function Animation:faceTowards(dx)
     if type(dx) ~= 'number' or dx ~= dx then
         error(('faceTowards: dx must be a number, got %s'):format(tostring(dx)), 2)
@@ -1697,8 +1576,6 @@ function Animation:faceTowards(dx)
     return self
 end
 
----@param direction 1|-1
----@return desAnim8.Animation
 function Animation:setDefaultFacing(direction)
     if direction ~= 1 and direction ~= -1 then
         error('setDefaultFacing: facing must be 1 (sheet faces right) or -1 (faces left)', 2)
@@ -1708,8 +1585,6 @@ function Animation:setDefaultFacing(direction)
 end
 
 -- Rounds the draw position to whole pixels.
----@param enabled boolean
----@return desAnim8.Animation
 function Animation:setPixelSnap(enabled)
     if type(enabled) ~= 'boolean' then error('setPixelSnap: expected a boolean', 2) end
     self._snap = enabled or nil
@@ -1720,10 +1595,6 @@ end
 -- Keeps `count` ghosts of earlier draws (one every `spacing` draws) and draws
 -- them behind the sprite with alpha rising towards the newest. `alpha` is the
 -- strongest ghost's share (default 0.5). nil clears the trail.
----@param count integer?
----@param spacing integer?
----@param alpha number?
----@return desAnim8.Animation
 function Animation:setTrail(count, spacing, alpha)
     if count == nil or count == 0 then
         self._trail = nil
@@ -1742,16 +1613,12 @@ end
 
 -- Recorded ghosts, oldest first. Each entry is { quad, x, y, r, sx, sy, ox, oy, kx, ky },
 -- ready for love.graphics.draw or a SpriteBatch.
----@return table[]
 function Animation:getTrail()
     return self._trail and self._trail.entries or {}
 end
 
 -- Draws `before` earlier and `after` later frames of the sequence, tinted, behind
 -- the sprite (animation debugging). Pass 0, 0 or nil to turn it off.
----@param before integer?
----@param after integer?
----@return desAnim8.Animation
 function Animation:setOnion(before, after)
     before, after = before or 0, after or 0
     if not isInteger(before) or not isInteger(after) or before < 0 or after < 0 then
@@ -1763,7 +1630,6 @@ function Animation:setOnion(before, after)
 end
 
 -- Outlines the current frame's rectangle with the transform draw would use.
----@return nil
 function Animation:drawBounds(x, y, r, sx, sy, ox, oy, kx, ky)
     local gfx = love.graphics
     local quad, fx, fy, fr, fsx, fsy, fox, foy, fkx, fky = self:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
@@ -1779,30 +1645,24 @@ function Animation:drawBounds(x, y, r, sx, sy, ox, oy, kx, ky)
 end
 
 -- Toggle horizontal flip. Returns self so calls can be chained.
----@return desAnim8.Animation
 function Animation:flipH()
     self.flippedH = not self.flippedH
     return self
 end
 
 -- Toggle vertical flip. Returns self so calls can be chained.
----@return desAnim8.Animation
 function Animation:flipV()
     self.flippedV = not self.flippedV
     return self
 end
 
 -- Absolute flip setters; safe to call every frame, unlike the toggles.
----@param flipped boolean
----@return desAnim8.Animation
 function Animation:setFlipH(flipped)
     if type(flipped) ~= 'boolean' then error('setFlipH: expected a boolean', 2) end
     self.flippedH = flipped
     return self
 end
 
----@param flipped boolean
----@return desAnim8.Animation
 function Animation:setFlipV(flipped)
     if type(flipped) ~= 'boolean' then error('setFlipV: expected a boolean', 2) end
     self.flippedV = flipped
@@ -1820,14 +1680,12 @@ local timing = require(PKG .. '.timing')
 local isInteger = util.isInteger
 local applyRegion, applySequence, locate = timing.applyRegion, timing.applySequence, timing.locate
 
----@class desAnim8.Animation
 local Animation = {}
 
 local STATE_VERSION = 1
 
 -- Plain-table snapshot of the playback state, for save games, replays and
 -- rollback. Restore it with setState on an animation built the same way.
----@return table
 function Animation:getState()
     local state = {
         v        = STATE_VERSION,
@@ -1849,8 +1707,6 @@ function Animation:getState()
     return state
 end
 
----@param s table
----@return desAnim8.Animation
 function Animation:setState(s)
     if type(s) ~= 'table' then error('setState: state must be a table from getState()', 2) end
     if s.v ~= STATE_VERSION then
@@ -1934,17 +1790,6 @@ local checkOptions, assertTickDurations, jittered = options.checkOptions, option
 
 -- Instances get their own class table so they do not inherit the module's
 -- constructors and metadata.
----@class desAnim8.Animation
----@field status 'playing'|'paused' read only
----@field currentFrame integer 1-based, read only
----@field playMode desAnim8.PlayMode read only
----@field image love.Texture? the bound image
----@field frames love.Quad[] read only
----@field flippedH boolean
----@field flippedV boolean
----@field onLoop (string|fun(anim: desAnim8.Animation, loops: integer))?
----@field onStart (string|fun(anim: desAnim8.Animation))?
----@field onEnd (string|fun(anim: desAnim8.Animation))?
 local Animation = {}
 Animation.__index = Animation
 
@@ -2005,7 +1850,6 @@ end
 -- sequence, intervals). Playback state starts fresh; flip, speed, onLoop and
 -- registered callbacks are copied. Random-order and jittered animations get
 -- their own order and durations.
----@return desAnim8.Animation
 function Animation:clone()
     local c = setmetatable({}, Animation)
     for k, v in pairs(self) do c[k] = v end
@@ -2063,18 +1907,6 @@ local assertPositiveInteger, assertNonNegativeInteger, parseRange = util.assertP
 -- The public table, handed over by _bind(); newGrid reads maxImageSize from it.
 local root
 
----@class desAnim8.Grid
----@field frameWidth integer
----@field frameHeight integer
----@field imageWidth integer
----@field imageHeight integer
----@field left integer
----@field top integer
----@field border integer
----@field inset number
----@field cols integer
----@field rows integer
----@overload fun(self: desAnim8.Grid, ...: number|string): love.Quad[]
 local Grid = {}
 Grid.__index = Grid
 
@@ -2087,15 +1919,6 @@ local sizeWarned = false
 -- anim8, one border precedes the first frame as well as separating frames.
 -- inset: pixels trimmed from every side of each frame (default 0, may be
 -- fractional) so linear filtering cannot bleed in a neighbouring frame.
----@param frameWidth integer
----@param frameHeight integer
----@param imageWidth integer
----@param imageHeight integer
----@param left integer?
----@param top integer?
----@param border integer?
----@param inset number?
----@return desAnim8.Grid
 local function newGrid(frameWidth, frameHeight, imageWidth, imageHeight, left, top, border, inset)
     assertPositiveInteger(frameWidth,  'frameWidth',  3)
     assertPositiveInteger(frameHeight, 'frameHeight', 3)
@@ -2135,14 +1958,12 @@ end
 -- Returns a list of love.graphics.newQuad objects. Identical calls reuse the
 -- quads built the first time (each call still gets its own list); see
 -- Grid:clearCache.
----@param ... number|string column and row ranges, in pairs
----@return love.Quad[]
 function Grid:getFrames(...)
     local count = select('#', ...)
     local args  = { ... }
-    local key   = {}
-    for i = 1, count do key[i] = tostring(args[i]) end
-    key = table.concat(key, '|')
+    local parts = {}
+    for i = 1, count do parts[i] = tostring(args[i]) end
+    local key = table.concat(parts, '|')
     local cached = self._cache[key]
     if cached then
         local copy = {}
@@ -2176,7 +1997,6 @@ function Grid:getFrames(...)
 end
 
 -- Drops the memoized quad lists.
----@return nil
 function Grid:clearCache()
     self._cache = {}
 end
@@ -2184,14 +2004,6 @@ end
 Grid.__call = Grid.getFrames
 
 -- Like newGrid, reading the sheet size from the image.
----@param image love.Texture
----@param frameWidth integer
----@param frameHeight integer
----@param left integer?
----@param top integer?
----@param border integer?
----@param inset number?
----@return desAnim8.Grid
 local function newGridFromImage(image, frameWidth, frameHeight, left, top, border, inset)
     if image == nil or type(image.getDimensions) ~= 'function' then
         error('newGridFromImage: image must be an Image (it needs getDimensions)', 2)
@@ -2241,9 +2053,6 @@ end
 -- image may be nil: the image is then supplied at draw time (see newAnimation
 -- and :draw), so one animation can be reused across several images and the
 -- library never has to hold a backend's image handle.
----@param image love.Texture?
----@param ... any frames, durations [, playMode [, opts]] or the legacy single-row arguments
----@return desAnim8.Animation
 local function new(image, ...)
     local frames, durations, playMode, opts
     if type((...)) == 'table' then
@@ -2257,11 +2066,6 @@ end
 
 -- Image-less constructor. Equivalent to new(nil, frames, durations, playMode);
 -- the image is passed to :draw at render time.
----@param frames love.Quad[]
----@param durations desAnim8.Durations
----@param playMode desAnim8.PlayMode?
----@param opts desAnim8.Options?
----@return desAnim8.Animation
 local function newAnimation(frames, durations, playMode, opts)
     local anim = build(nil, frames, durations, playMode, opts)
     return anim
@@ -2269,12 +2073,6 @@ end
 
 -- Same as new(image, frames, durations, playMode), named for hand-made quad
 -- lists (non-grid atlases, cropped regions).
----@param image love.Texture?
----@param quads love.Quad[]
----@param durations desAnim8.Durations
----@param playMode desAnim8.PlayMode?
----@param opts desAnim8.Options?
----@return desAnim8.Animation
 local function newAnimationFromQuads(image, quads, durations, playMode, opts)
     local anim = build(image, quads, durations, playMode, opts)
     return anim
@@ -2305,12 +2103,6 @@ local assertPositiveInteger = util.assertPositiveInteger
 
 -- Returns quads, data (for the `data` constructor option) and, when every record
 -- has one, a durations list.
----@param records desAnim8.FrameRecord[]
----@param imageWidth integer
----@param imageHeight integer
----@return love.Quad[] quads
----@return table<integer, table> data
----@return number[]? durations
 local function newFramesFromRecords(records, imageWidth, imageHeight)
     if type(records) ~= 'table' or #records == 0 then
         error('newFramesFromRecords: records must be a non-empty list', 2)
@@ -2395,10 +2187,6 @@ end
 
 -- TexturePacker "JSON (Array)" export, already decoded. Returns records, the
 -- image width and the image height (from meta.size, when present).
----@param decoded table
----@return desAnim8.FrameRecord[] records
----@return integer? imageWidth
----@return integer? imageHeight
 function atlas.fromTexturePacker(decoded)
     if type(decoded) ~= 'table' or type(decoded.frames) ~= 'table' then
         error('fromTexturePacker: expected a decoded export table with a frames list', 2)
@@ -2425,8 +2213,6 @@ end
 -- Starling / Sparrow sub-textures: a list of attribute tables (as produced by
 -- any XML decoder) with x, y, width, height and optional frameX, frameY,
 -- frameWidth, frameHeight. frameX and frameY are negative trim offsets.
----@param list table[]
----@return desAnim8.FrameRecord[]
 function atlas.fromStarling(list)
     if type(list) ~= 'table' or list[1] == nil then
         error('fromStarling: expected a non-empty list of attribute tables', 2)
@@ -2487,12 +2273,6 @@ local function parseAseprite(decoded, level)
     return records, meta.size and meta.size.w, meta.size and meta.size.h, tags, meta.slices or {}
 end
 
----@param decoded table
----@return desAnim8.FrameRecord[] records
----@return integer? imageWidth
----@return integer? imageHeight
----@return table[] tags
----@return table[] slices
 function atlas.fromAseprite(decoded)
     return parseAseprite(decoded, 3)
 end
@@ -2507,11 +2287,6 @@ local ASEPRITE_DIRECTIONS = { forward = true, reverse = true, pingpong = true, p
 -- A tag `repeat` of 1 plays once; N > 1 parks at the end after N plays through an
 -- `onLoop` hook (opts.playMode drops the limit).
 -- The library never reads files or decodes JSON itself.
----@param source table|string decoded export, or JSON text with opts.decode
----@param image love.Texture?
----@param tag string? tag name; nil takes every frame
----@param opts (desAnim8.Options|{decode: (fun(text: string): table)?, playMode: desAnim8.PlayMode?})?
----@return desAnim8.Animation
 local function newFromAseprite(source, image, tag, opts)
     local ctor = {}
     local decode, playMode
@@ -2618,10 +2393,6 @@ __modules['desAnim8.sheet'] = function(...)
 -- ({ x = 0, y = 0, w = 0, h = 0 } for an empty frame). `imageData` is anything
 -- with getPixel(x, y) -> r, g, b, a; pixels with alpha above `threshold` (default 0)
 -- count as opaque.
----@param quads love.Quad[]
----@param imageData love.ImageData
----@param threshold number?
----@return desAnim8.Rect[]
 local function scanBounds(quads, imageData, threshold)
     threshold = threshold or 0
     local out = {}
@@ -2647,8 +2418,6 @@ local function scanBounds(quads, imageData, threshold)
 end
 
 -- Turns { name = listPerFrame } into the frame-indexed table the `data` option takes.
----@param lists table<string, any[]>
----@return table<integer, table<string, any>>
 local function dataFromLists(lists)
     local data = {}
     for name, list in pairs(lists) do
@@ -2665,9 +2434,6 @@ end
 -- opts: threshold (alpha above it is opaque, default 0), mergeGap (join regions at
 -- most this many empty pixels apart, default: no merging), minSize (drop regions
 -- narrower or shorter than this).
----@param imageData love.ImageData
----@param opts {threshold: number?, mergeGap: integer?, minSize: integer?}?
----@return desAnim8.Rect[]
 local function sliceByAlpha(imageData, opts)
     opts = opts or {}
     local threshold = opts.threshold or 0
@@ -2760,10 +2526,6 @@ local function sliceByAlpha(imageData, opts)
 end
 
 -- Quads for a list of { x, y, w, h } rectangles (for example from sliceByAlpha).
----@param rects desAnim8.Rect[]
----@param imageWidth integer
----@param imageHeight integer
----@return love.Quad[]
 local function newQuadsFromRects(rects, imageWidth, imageHeight)
     local quads = {}
     for i, r in ipairs(rects) do
@@ -2787,8 +2549,6 @@ local Animation = require(PKG .. '.animation').Animation
 local atlas = require(PKG .. '.atlas')
 local newFromAseprite, parseAseprite = atlas.newFromAseprite, atlas._parseAseprite
 
----@class desAnim8.Set
----@field onChange (fun(set: desAnim8.Set, from: string, to: string))?
 local Set = {}
 Set.__index = Set
 
@@ -2797,9 +2557,6 @@ Set.__index = Set
 -- alphabetical order. Playback controls act on the current clip; the style setters
 -- (setColor, setShader, ...) apply to every clip. Flip state follows the sprite
 -- from clip to clip.
----@param clips table<string, desAnim8.Animation>
----@param initial string?
----@return desAnim8.Set
 local function newSet(clips, initial)
     if type(clips) ~= 'table' or next(clips) == nil then
         error('newSet: clips must be a non-empty table of name -> animation', 2)
@@ -2824,9 +2581,6 @@ end
 -- Switches clip (the new one starts over unless opts.keepPhase carries the
 -- current phase across; opts.restart replays the clip that is already current).
 -- Clears any queued clip and calls set.onChange(set, from, to) on a change.
----@param name string
----@param opts {keepPhase: boolean?, restart: boolean?}?
----@return desAnim8.Set
 function Set:play(name, opts)
     local nextClip = self._clips[name]
     if not nextClip then error(('play: unknown clip %q'):format(tostring(name)), 2) end
@@ -2845,8 +2599,6 @@ end
 
 -- Plays `name` when the current clip finishes (once modes) or completes its
 -- current loop (looping modes).
----@param name string
----@return desAnim8.Set
 function Set:queue(name)
     if not self._clips[name] then error(('queue: unknown clip %q'):format(tostring(name)), 2) end
     self._queued = name
@@ -2855,9 +2607,6 @@ end
 
 -- Declares that `name` hands over to `nextName` whenever it finishes (once modes)
 -- or completes a loop, unless another clip was queued. nil clears the rule.
----@param name string
----@param nextName string?
----@return desAnim8.Set
 function Set:setNext(name, nextName)
     if not self._clips[name] then error(('setNext: unknown clip %q'):format(tostring(name)), 2) end
     if nextName ~= nil and not self._clips[nextName] then
@@ -2868,7 +2617,6 @@ function Set:setNext(name, nextName)
     return self
 end
 
----@param dt number
 function Set:update(dt)
     local clip = self._cur
     local loops = clip._loops
@@ -2878,14 +2626,10 @@ function Set:update(dt)
 end
 
 -- Returns the current animation and its name.
----@return desAnim8.Animation
----@return string name
 function Set:getCurrent()
     return self._cur, self._name
 end
 
----@param name string
----@return desAnim8.Animation?
 function Set:getClip(name)
     return self._clips[name]
 end
@@ -2921,10 +2665,6 @@ end
 -- One clip per frame tag of an Aseprite export (decoded table, or a JSON string
 -- with opts.decode). opts.initial names the starting clip (default: the first
 -- tag in the file); the other opts go to newFromAseprite.
----@param source table|string
----@param image love.Texture?
----@param opts table?
----@return desAnim8.Set
 local function newSetFromAseprite(source, image, opts)
     local clipOpts, initial, decoded = {}, nil, source
     for k, v in pairs(opts or {}) do
@@ -2962,9 +2702,6 @@ __modules['desAnim8.composite'] = function(...)
 local PKG = (...):match('^(.*)%.[^.]*$')
 local flipFor = require(PKG .. '.util').flipFor
 
----@class desAnim8.Composite
----@field flippedH boolean
----@field flippedV boolean
 local Composite = {}
 Composite.__index = Composite
 
@@ -2974,8 +2711,6 @@ Composite.__index = Composite
 -- (and so do not fire their own events). dx and dy shift a layer in sprite
 -- pixels and are mirrored when the composite is flipped. `image` is only needed
 -- for image-less animations.
----@param layers {anim: desAnim8.Animation|desAnim8.Set, dx: number?, dy: number?, hidden: boolean?, image: love.Texture?}[]
----@return desAnim8.Composite
 local function newComposite(layers)
     if type(layers) ~= 'table' or #layers == 0 then
         error('newComposite: layers must be a non-empty list of { anim = ... }', 2)
@@ -3083,7 +2818,6 @@ local build = require(PKG .. '.animation').build
 local isInteger, seekIndex = util.isInteger, util.seekIndex
 local PAUSE_AT_END, clock = timing.PAUSE_AT_END, timing.clock
 
----@class desAnim8.Batch
 local Batch = {}
 Batch.__index = Batch
 
@@ -3092,13 +2826,6 @@ Batch.__index = Batch
 -- drawn through one SpriteBatch. A frame change rewrites only that sprite. Each
 -- entry has a position, transform, flip, speed and phase; loop ranges, events
 -- and the other per-animation features are not available here.
----@param image love.Texture
----@param frames love.Quad[]
----@param durations desAnim8.Durations
----@param playMode desAnim8.PlayMode?
----@param capacity integer
----@param opts desAnim8.Options?
----@return desAnim8.Batch
 local function newBatch(image, frames, durations, playMode, capacity, opts)
     if not isInteger(capacity) or capacity < 1 then
         error(('newBatch: capacity must be a positive integer, got %s'):format(tostring(capacity)), 2)
@@ -3139,7 +2866,6 @@ local function checkEntry(self, id, what)
 end
 
 -- Adds an entry drawn with the usual x, y, r, sx, sy, ox, oy, kx, ky; returns its id.
----@return integer id
 function Batch:add(x, y, r, sx, sy, ox, oy, kx, ky)
     if self._count >= self._capacity then
         error(('add: batch is full (capacity %d)'):format(self._capacity), 2)
@@ -3160,7 +2886,6 @@ function Batch:add(x, y, r, sx, sy, ox, oy, kx, ky)
 end
 
 -- Frees an entry; its sprite is hidden and the slot is reused by the next add.
----@param id integer
 function Batch:remove(id)
     checkEntry(self, id, 'remove')
     self._alive[id] = false
@@ -3180,8 +2905,6 @@ function Batch:getCount()
     return self._count
 end
 
----@param id integer
----@return integer
 function Batch:getFrame(id)
     checkEntry(self, id, 'getFrame')
     return self._anim._seq[self._pos[id]]
@@ -3235,7 +2958,6 @@ function Batch:randomizePhases(rng)
     end
 end
 
----@param dt number
 function Batch:update(dt)
     if type(dt) ~= 'number' then
         error(('update: dt must be a number, got %s'):format(type(dt)), 2)
@@ -3287,7 +3009,6 @@ end
 __modules['desAnim8.watcher'] = function(...)
 -- Reload-on-change helper.
 
----@class desAnim8.Watcher
 local Watcher = {}
 Watcher.__index = Watcher
 
@@ -3301,16 +3022,11 @@ end
 -- records the file's modification time; later polls call onChange(path) when it
 -- moves and return true. statFn(path) -> modification time or nil; the default
 -- uses love.filesystem.getInfo.
----@param path string
----@param onChange fun(path: string)
----@param statFn (fun(path: string): number?)?
----@return desAnim8.Watcher
 local function newWatcher(path, onChange, statFn)
     if type(onChange) ~= 'function' then error('newWatcher: onChange must be a function', 2) end
     return setmetatable({ _path = path, _onChange = onChange, _stat = statFn or defaultStat }, Watcher)
 end
 
----@return boolean changed
 function Watcher:poll()
     local modified = self._stat(self._path)
     if modified == nil then return false end
@@ -3409,37 +3125,6 @@ local desAnim8 = {
       SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     ]]
 }
-
----@alias desAnim8.PlayMode 'loop'|'once'|'bounce'|'bounceOnce'|'random'
----@alias desAnim8.Durations number|number[]|table<string, number>
----@alias desAnim8.Easing 'linear'|'inQuad'|'outQuad'|'inOutQuad'|'inCubic'|'outCubic'|'inOutCubic'|fun(t: number): number
-
----@class desAnim8.Options
----@field ticks boolean? integer durations and steps, exact on every platform
----@field weights number[]? per-frame weights for the 'random' mode
----@field jitter number? random duration spread in [0,1), per instance
----@field rng (fun(): number)? random source returning [0,1)
----@field randomLength integer? length of the generated 'random' order (default 32)
----@field data table<integer, table<string, any>>? per-frame data: hitbox, pivot, trim, transform, ...
-
----@class desAnim8.FrameRecord
----@field x number
----@field y number
----@field w number
----@field h number
----@field trimX number?
----@field trimY number?
----@field sourceW number?
----@field sourceH number?
----@field name string?
----@field duration number? seconds
----@field rotated (boolean|'cw'|'ccw')? stored turned 90 degrees (true is clockwise)
-
----@class desAnim8.Rect
----@field x number
----@field y number
----@field w number
----@field h number
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 

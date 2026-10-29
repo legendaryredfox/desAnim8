@@ -10,17 +10,6 @@ local checkOptions, assertTickDurations, jittered = options.checkOptions, option
 
 -- Instances get their own class table so they do not inherit the module's
 -- constructors and metadata.
----@class desAnim8.Animation
----@field status 'playing'|'paused' read only
----@field currentFrame integer 1-based, read only
----@field playMode desAnim8.PlayMode read only
----@field image love.Texture? the bound image
----@field frames love.Quad[] read only
----@field flippedH boolean
----@field flippedV boolean
----@field onLoop (string|fun(anim: desAnim8.Animation, loops: integer))?
----@field onStart (string|fun(anim: desAnim8.Animation))?
----@field onEnd (string|fun(anim: desAnim8.Animation))?
 local Animation = {}
 Animation.__index = Animation
 
@@ -81,7 +70,6 @@ end
 -- sequence, intervals). Playback state starts fresh; flip, speed, onLoop and
 -- registered callbacks are copied. Random-order and jittered animations get
 -- their own order and durations.
----@return desAnim8.Animation
 function Animation:clone()
     local c = setmetatable({}, Animation)
     for k, v in pairs(self) do c[k] = v end

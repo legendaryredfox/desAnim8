@@ -15,12 +15,6 @@ local assertPositiveInteger = util.assertPositiveInteger
 
 -- Returns quads, data (for the `data` constructor option) and, when every record
 -- has one, a durations list.
----@param records desAnim8.FrameRecord[]
----@param imageWidth integer
----@param imageHeight integer
----@return love.Quad[] quads
----@return table<integer, table> data
----@return number[]? durations
 local function newFramesFromRecords(records, imageWidth, imageHeight)
     if type(records) ~= 'table' or #records == 0 then
         error('newFramesFromRecords: records must be a non-empty list', 2)
@@ -105,10 +99,6 @@ end
 
 -- TexturePacker "JSON (Array)" export, already decoded. Returns records, the
 -- image width and the image height (from meta.size, when present).
----@param decoded table
----@return desAnim8.FrameRecord[] records
----@return integer? imageWidth
----@return integer? imageHeight
 function atlas.fromTexturePacker(decoded)
     if type(decoded) ~= 'table' or type(decoded.frames) ~= 'table' then
         error('fromTexturePacker: expected a decoded export table with a frames list', 2)
@@ -135,8 +125,6 @@ end
 -- Starling / Sparrow sub-textures: a list of attribute tables (as produced by
 -- any XML decoder) with x, y, width, height and optional frameX, frameY,
 -- frameWidth, frameHeight. frameX and frameY are negative trim offsets.
----@param list table[]
----@return desAnim8.FrameRecord[]
 function atlas.fromStarling(list)
     if type(list) ~= 'table' or list[1] == nil then
         error('fromStarling: expected a non-empty list of attribute tables', 2)
@@ -197,12 +185,6 @@ local function parseAseprite(decoded, level)
     return records, meta.size and meta.size.w, meta.size and meta.size.h, tags, meta.slices or {}
 end
 
----@param decoded table
----@return desAnim8.FrameRecord[] records
----@return integer? imageWidth
----@return integer? imageHeight
----@return table[] tags
----@return table[] slices
 function atlas.fromAseprite(decoded)
     return parseAseprite(decoded, 3)
 end
@@ -217,11 +199,6 @@ local ASEPRITE_DIRECTIONS = { forward = true, reverse = true, pingpong = true, p
 -- A tag `repeat` of 1 plays once; N > 1 parks at the end after N plays through an
 -- `onLoop` hook (opts.playMode drops the limit).
 -- The library never reads files or decodes JSON itself.
----@param source table|string decoded export, or JSON text with opts.decode
----@param image love.Texture?
----@param tag string? tag name; nil takes every frame
----@param opts (desAnim8.Options|{decode: (fun(text: string): table)?, playMode: desAnim8.PlayMode?})?
----@return desAnim8.Animation
 local function newFromAseprite(source, image, tag, opts)
     local ctor = {}
     local decode, playMode

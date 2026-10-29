@@ -86,7 +86,7 @@ Estrutura: `desAnim8.lua` monta a API; `desAnim8/` tem o núcleo (`util`, `timin
 
 **Versões suportadas:** LÖVE 11.5 (a última versão estável), LuaJIT 2.1 e Lua 5.1 até 5.5. O código usa só o subconjunto comum dessas versões. As partes que dependem de mais do que `love.graphics.newQuad` e `love.graphics.draw` estão marcadas como **[LÖVE]** neste documento e nunca tocam na API do LÖVE ao carregar o módulo.
 
-Há anotações LuaCATS no arquivo, então editores com `lua-language-server` mostram tipos e autocompletar.
+A API pública está tipada em `types/desAnim8.lua` (LuaCATS). Aponte o `workspace.library` do `lua-language-server` para a pasta `types` e o editor mostra tipos e autocompletar; o repositório traz um `.luarc.json` pronto.
 
 ---
 
@@ -736,7 +736,7 @@ Layout: `desAnim8.lua` assembles the API; `desAnim8/` holds the core (`util`, `t
 
 **Supported versions:** LÖVE 11.5 (the latest stable release), LuaJIT 2.1 and Lua 5.1 through 5.5. The code sticks to the common subset of those. Parts that need more than `love.graphics.newQuad` and `love.graphics.draw` are marked **[LÖVE]** in this document, and none of them touch the LÖVE API when the module loads.
 
-The file carries LuaCATS annotations, so editors running `lua-language-server` show types and completion.
+The public API is typed in `types/desAnim8.lua` (LuaCATS). Point the `lua-language-server` `workspace.library` at the `types` folder and the editor shows types and completion; the repository ships a ready `.luarc.json`.
 
 ---
 
