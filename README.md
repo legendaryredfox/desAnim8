@@ -1,4 +1,4 @@
-# desAnim8 v0.10.0
+# desAnim8 v1.0.0
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-legendaryredfox-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/legendaryredfox)
 
@@ -80,7 +80,7 @@ desAnim8 não tem dependências além do próprio LÖVE. Há duas formas de usar
 local desAnim8 = require 'libraries.desAnim8'   -- ajuste o caminho; vale para as duas formas
 ```
 
-Também há um rockspec: `luarocks make desanim8-0.10.0-1.rockspec`.
+Também há um rockspec: `luarocks make desanim8-1.0.0-1.rockspec`.
 
 Estrutura: `desAnim8.lua` monta a API; `desAnim8/` tem o núcleo (`util`, `timing`, `options`, `animation`), os módulos que acrescentam métodos à animação (`playback`, `timeline`, `events`, `frameinfo`, `render`, `state`) e os recursos independentes (`grid`, `constructors`, `atlas`, `sheet`, `set`, `composite`, `batch`, `watcher`, `debug`, `shaders`).
 
@@ -505,6 +505,7 @@ Serve para jogos salvos, replays e rollback. A tabela só tem valores simples, q
 | Estado | `getState`, `setState` |
 | Atlas e ferramentas | `newFramesFromRecords`, `atlas.fromTexturePacker`, `atlas.fromStarling`, `atlas.fromAseprite`, `scanBounds`, `dataFromLists`, `sliceByAlpha`, `newQuadsFromRects` |
 | Depuração | `debug.drawTimeline`, `debug.scrub`, `shaders` |
+| Classes | `Grid`: `getFrames`, `clearCache`. `Set`: `play`, `queue`, `setNext`, `getCurrent`, `getClip`, `update`, `onChange`. `Composite`: `getLayer`, `setHidden`, `update`. `Batch`: `add`, `set`, `remove`, `clear`, `getCount`, `getFrame`, `setFlip`, `setSpeed`, `setPhase`, `randomizePhases`, `update`, `draw`. `Watcher`: `poll` |
 
 Quando a animação não tem imagem, passe a imagem primeiro: `anim:draw(image, x, y [, ...])`. Passar o formato errado dá um erro que diz qual forma usar.
 
@@ -730,7 +731,7 @@ desAnim8 has no dependencies beyond LÖVE itself. There are two ways to use it:
 local desAnim8 = require 'libraries.desAnim8'   -- adjust the path to where you put it; same for both
 ```
 
-A rockspec is included too: `luarocks make desanim8-0.10.0-1.rockspec`.
+A rockspec is included too: `luarocks make desanim8-1.0.0-1.rockspec`.
 
 Layout: `desAnim8.lua` assembles the API; `desAnim8/` holds the core (`util`, `timing`, `options`, `animation`), the modules that add methods to the animation (`playback`, `timeline`, `events`, `frameinfo`, `render`, `state`) and the independent features (`grid`, `constructors`, `atlas`, `sheet`, `set`, `composite`, `batch`, `watcher`, `debug`, `shaders`).
 
@@ -1157,6 +1158,7 @@ Use it for save games, replays and rollback. The table holds plain values only, 
 | State | `getState`, `setState` |
 | Atlases and tools | `newFramesFromRecords`, `atlas.fromTexturePacker`, `atlas.fromStarling`, `atlas.fromAseprite`, `scanBounds`, `dataFromLists`, `sliceByAlpha`, `newQuadsFromRects` |
 | Debugging | `debug.drawTimeline`, `debug.scrub`, `shaders` |
+| Classes | `Grid`: `getFrames`, `clearCache`. `Set`: `play`, `queue`, `setNext`, `getCurrent`, `getClip`, `update`, `onChange`. `Composite`: `getLayer`, `setHidden`, `update`. `Batch`: `add`, `set`, `remove`, `clear`, `getCount`, `getFrame`, `setFlip`, `setSpeed`, `setPhase`, `randomizePhases`, `update`, `draw`. `Watcher`: `poll` |
 
 When the animation has no bound image, pass the image first: `anim:draw(image, x, y [, ...])`. Passing the wrong shape raises an error that says which form to use.
 

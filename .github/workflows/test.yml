@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y luarocks lua5.4 liblua5.4-dev
-      - run: luarocks --local make desanim8-0.10.0-1.rockspec
+      - run: luarocks --local make desanim8-1.0.0-1.rockspec
 
   smoke:
     runs-on: ubuntu-latest
