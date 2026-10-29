@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.10.0 (unreleased)
+## 0.10.0
 
 ### Added
 - Queries: `getCurrentFrameNumber`, `getRemainingTime`, `getPhase`/`setPhase`, `getLoopCount`, `isFinished`, `getFrameProgress`.
