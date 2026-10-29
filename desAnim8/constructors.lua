@@ -31,9 +31,6 @@ end
 -- image may be nil: the image is then supplied at draw time (see newAnimation
 -- and :draw), so one animation can be reused across several images and the
 -- library never has to hold a backend's image handle.
----@param image love.Texture?
----@param ... any frames, durations [, playMode [, opts]] or the legacy single-row arguments
----@return desAnim8.Animation
 local function new(image, ...)
     local frames, durations, playMode, opts
     if type((...)) == 'table' then
@@ -47,11 +44,6 @@ end
 
 -- Image-less constructor. Equivalent to new(nil, frames, durations, playMode);
 -- the image is passed to :draw at render time.
----@param frames love.Quad[]
----@param durations desAnim8.Durations
----@param playMode desAnim8.PlayMode?
----@param opts desAnim8.Options?
----@return desAnim8.Animation
 local function newAnimation(frames, durations, playMode, opts)
     local anim = build(nil, frames, durations, playMode, opts)
     return anim
@@ -59,12 +51,6 @@ end
 
 -- Same as new(image, frames, durations, playMode), named for hand-made quad
 -- lists (non-grid atlases, cropped regions).
----@param image love.Texture?
----@param quads love.Quad[]
----@param durations desAnim8.Durations
----@param playMode desAnim8.PlayMode?
----@param opts desAnim8.Options?
----@return desAnim8.Animation
 local function newAnimationFromQuads(image, quads, durations, playMode, opts)
     local anim = build(image, quads, durations, playMode, opts)
     return anim

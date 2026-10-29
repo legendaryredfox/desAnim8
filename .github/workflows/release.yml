@@ -27,7 +27,7 @@ jobs:
           lua5.4 tools/bundle.lua --check
           DESANIM8_BUNDLE=dist/desAnim8.lua luajit tests/run.lua
       - name: Package
-        run: zip -r desAnim8-modules.zip desAnim8.lua desAnim8 LICENSE
+        run: zip -r desAnim8-modules.zip desAnim8.lua desAnim8 types LICENSE
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}

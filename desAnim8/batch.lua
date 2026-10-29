@@ -7,7 +7,6 @@ local build = require(PKG .. '.animation').build
 local isInteger, seekIndex = util.isInteger, util.seekIndex
 local PAUSE_AT_END, clock = timing.PAUSE_AT_END, timing.clock
 
----@class desAnim8.Batch
 local Batch = {}
 Batch.__index = Batch
 
@@ -16,13 +15,6 @@ Batch.__index = Batch
 -- drawn through one SpriteBatch. A frame change rewrites only that sprite. Each
 -- entry has a position, transform, flip, speed and phase; loop ranges, events
 -- and the other per-animation features are not available here.
----@param image love.Texture
----@param frames love.Quad[]
----@param durations desAnim8.Durations
----@param playMode desAnim8.PlayMode?
----@param capacity integer
----@param opts desAnim8.Options?
----@return desAnim8.Batch
 local function newBatch(image, frames, durations, playMode, capacity, opts)
     if not isInteger(capacity) or capacity < 1 then
         error(('newBatch: capacity must be a positive integer, got %s'):format(tostring(capacity)), 2)
@@ -63,7 +55,6 @@ local function checkEntry(self, id, what)
 end
 
 -- Adds an entry drawn with the usual x, y, r, sx, sy, ox, oy, kx, ky; returns its id.
----@return integer id
 function Batch:add(x, y, r, sx, sy, ox, oy, kx, ky)
     if self._count >= self._capacity then
         error(('add: batch is full (capacity %d)'):format(self._capacity), 2)
@@ -84,7 +75,6 @@ function Batch:add(x, y, r, sx, sy, ox, oy, kx, ky)
 end
 
 -- Frees an entry; its sprite is hidden and the slot is reused by the next add.
----@param id integer
 function Batch:remove(id)
     checkEntry(self, id, 'remove')
     self._alive[id] = false
@@ -104,8 +94,6 @@ function Batch:getCount()
     return self._count
 end
 
----@param id integer
----@return integer
 function Batch:getFrame(id)
     checkEntry(self, id, 'getFrame')
     return self._anim._seq[self._pos[id]]
@@ -159,7 +147,6 @@ function Batch:randomizePhases(rng)
     end
 end
 
----@param dt number
 function Batch:update(dt)
     if type(dt) ~= 'number' then
         error(('update: dt must be a number, got %s'):format(type(dt)), 2)

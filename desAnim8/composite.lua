@@ -2,9 +2,6 @@
 local PKG = (...):match('^(.*)%.[^.]*$')
 local flipFor = require(PKG .. '.util').flipFor
 
----@class desAnim8.Composite
----@field flippedH boolean
----@field flippedV boolean
 local Composite = {}
 Composite.__index = Composite
 
@@ -14,8 +11,6 @@ Composite.__index = Composite
 -- (and so do not fire their own events). dx and dy shift a layer in sprite
 -- pixels and are mirrored when the composite is flipped. `image` is only needed
 -- for image-less animations.
----@param layers {anim: desAnim8.Animation|desAnim8.Set, dx: number?, dy: number?, hidden: boolean?, image: love.Texture?}[]
----@return desAnim8.Composite
 local function newComposite(layers)
     if type(layers) ~= 'table' or #layers == 0 then
         error('newComposite: layers must be a non-empty list of { anim = ... }', 2)

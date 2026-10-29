@@ -6,18 +6,6 @@ local assertPositiveInteger, assertNonNegativeInteger, parseRange = util.assertP
 -- The public table, handed over by _bind(); newGrid reads maxImageSize from it.
 local root
 
----@class desAnim8.Grid
----@field frameWidth integer
----@field frameHeight integer
----@field imageWidth integer
----@field imageHeight integer
----@field left integer
----@field top integer
----@field border integer
----@field inset number
----@field cols integer
----@field rows integer
----@overload fun(self: desAnim8.Grid, ...: number|string): love.Quad[]
 local Grid = {}
 Grid.__index = Grid
 
@@ -30,15 +18,6 @@ local sizeWarned = false
 -- anim8, one border precedes the first frame as well as separating frames.
 -- inset: pixels trimmed from every side of each frame (default 0, may be
 -- fractional) so linear filtering cannot bleed in a neighbouring frame.
----@param frameWidth integer
----@param frameHeight integer
----@param imageWidth integer
----@param imageHeight integer
----@param left integer?
----@param top integer?
----@param border integer?
----@param inset number?
----@return desAnim8.Grid
 local function newGrid(frameWidth, frameHeight, imageWidth, imageHeight, left, top, border, inset)
     assertPositiveInteger(frameWidth,  'frameWidth',  3)
     assertPositiveInteger(frameHeight, 'frameHeight', 3)
@@ -78,14 +57,12 @@ end
 -- Returns a list of love.graphics.newQuad objects. Identical calls reuse the
 -- quads built the first time (each call still gets its own list); see
 -- Grid:clearCache.
----@param ... number|string column and row ranges, in pairs
----@return love.Quad[]
 function Grid:getFrames(...)
     local count = select('#', ...)
     local args  = { ... }
-    local key   = {}
-    for i = 1, count do key[i] = tostring(args[i]) end
-    key = table.concat(key, '|')
+    local parts = {}
+    for i = 1, count do parts[i] = tostring(args[i]) end
+    local key = table.concat(parts, '|')
     local cached = self._cache[key]
     if cached then
         local copy = {}
@@ -119,7 +96,6 @@ function Grid:getFrames(...)
 end
 
 -- Drops the memoized quad lists.
----@return nil
 function Grid:clearCache()
     self._cache = {}
 end
@@ -127,14 +103,6 @@ end
 Grid.__call = Grid.getFrames
 
 -- Like newGrid, reading the sheet size from the image.
----@param image love.Texture
----@param frameWidth integer
----@param frameHeight integer
----@param left integer?
----@param top integer?
----@param border integer?
----@param inset number?
----@return desAnim8.Grid
 local function newGridFromImage(image, frameWidth, frameHeight, left, top, border, inset)
     if image == nil or type(image.getDimensions) ~= 'function' then
         error('newGridFromImage: image must be an Image (it needs getDimensions)', 2)

@@ -205,6 +205,126 @@ function love.load()
             end
         end
 
+        -- render state, checked on pixels
+        do
+            local function pixel(x, y)
+                local r, g, b, a = canvas:newImageData():getPixel(x, y)
+                return r, g, b, a
+            end
+            local function bbox()
+                local d = canvas:newImageData()
+                local x0, y0, x1, y1 = math.huge, math.huge, 0, 0
+                for y = 0, d:getHeight() - 1 do
+                    for x = 0, d:getWidth() - 1 do
+                        local _, _, _, a = d:getPixel(x, y)
+                        if a > 0 then
+                            x0, y0 = math.min(x0, x), math.min(y0, y)
+                            x1, y1 = math.max(x1, x + 1), math.max(y1, y + 1)
+                        end
+                    end
+                end
+                return x0, y0, x1, y1
+            end
+            local function nearly(a, b) return math.abs(a - b) < 0.02 end
+            local white = love.image.newImageData(16, 16)
+            white:mapPixel(function() return 1, 1, 1, 1 end)
+            local whiteImage = love.graphics.newImage(white)
+            whiteImage:setFilter('nearest', 'nearest')
+            local one = desAnim8.newAnimation(desAnim8.newGrid(16, 16, 16, 16)(1, 1), 1)
+
+            one:setColor(1, 0, 0, 1)
+            render(function() one:draw(whiteImage, 0, 0) end)
+            local r, g, b, a = pixel(8, 8)
+            check('setColor tints the sprite', nearly(r, 1) and nearly(g, 0) and nearly(b, 0) and nearly(a, 1))
+            one:setColor()
+            one:setAlpha(0.5)
+            render(function() one:draw(whiteImage, 0, 0) end)
+            _, _, _, a = pixel(8, 8)
+            check('setAlpha halves the alpha', nearly(a, 0.5), tostring(a))
+            render(function() one:draw(whiteImage, 0, 0) end)
+            local gr, gg, gb, ga = love.graphics.getColor()
+            check('draw restores the graphics color', gr == 1 and gg == 1 and gb == 1 and ga == 1)
+            one:setAlpha(1)
+
+            one:setColor(0.5, 0.5, 0.5, 1):setBlendMode('add')
+            render(function() one:draw(whiteImage, 0, 0); one:draw(whiteImage, 0, 0) end)
+            r = pixel(8, 8)
+            check('setBlendMode add accumulates', nearly(r, 1), tostring(r))
+            check('draw restores the blend mode', love.graphics.getBlendMode() == 'alpha')
+            one:setColor():setBlendMode()
+
+            one:flash(1, 1, 0, 0)
+            render(function() one:draw(whiteImage, 0, 0) end)
+            r, g = pixel(8, 8)
+            check('flash tints while active', nearly(r, 1) and nearly(g, 0))
+            one:update(1)
+            render(function() one:draw(whiteImage, 0, 0) end)
+            r, g = pixel(8, 8)
+            check('flash ends after its seconds', nearly(r, 1) and nearly(g, 1))
+
+            one:setPixelSnap(true)
+            render(function() one:draw(whiteImage, 10.6, 10.6) end)
+            local x0, y0, x1, y1 = bbox()
+            check('pixel snap rounds the position', x0 == 11 and y0 == 11 and x1 == 27 and y1 == 27,
+                x0 .. ',' .. y0 .. ',' .. x1 .. ',' .. y1)
+            one:setPixelSnap(false)
+
+            local marks = love.image.newImageData(32, 16)
+            marks:setPixel(1, 1, 1, 1, 1, 1)
+            marks:setPixel(16 + 14, 14, 1, 1, 1, 1)
+            local marksImage = love.graphics.newImage(marks)
+            marksImage:setFilter('nearest', 'nearest')
+            local onion = desAnim8.new(marksImage, desAnim8.newGrid(16, 16, 32, 16)('1-2', 1), 1)
+            onion:gotoFrame(2)
+            render(function() onion:draw(0, 0) end)
+            _, _, _, a = pixel(1, 1)
+            check('no onion skin by default', a == 0)
+            onion:setOnion(1, 0)
+            render(function() onion:draw(0, 0) end)
+            _, _, _, a = pixel(1, 1)
+            local _, _, _, current = pixel(14, 14)
+            check('onion skin shows the earlier frame behind the sprite', a > 0 and a < 1 and current == 1,
+                tostring(a) .. ' / ' .. tostring(current))
+
+            render(function() one:drawBounds(20, 20, 0, 2, 2) end)
+            local _, _, _, edge = pixel(36, 20)
+            local _, _, _, edgeAbove = pixel(36, 19)
+            local _, _, _, inside = pixel(36, 36)
+            check('drawBounds outlines the scaled frame', (edge > 0 or edgeAbove > 0) and inside == 0)
+
+            -- an Aseprite slice is a world rect that must match the pixels it marks
+            local art = love.image.newImageData(32, 16)
+            for y = 2, 5 do for x = 10, 13 do art:setPixel(16 + x, y, 1, 0, 0, 1) end end
+            local artImage = love.graphics.newImage(art)
+            artImage:setFilter('nearest', 'nearest')
+            local export = {
+                frames = {
+                    { filename = 'a', frame = { x = 0, y = 0, w = 16, h = 16 }, rotated = false, trimmed = false,
+                      spriteSourceSize = { x = 0, y = 0, w = 16, h = 16 }, sourceSize = { w = 16, h = 16 }, duration = 100 },
+                    { filename = 'b', frame = { x = 16, y = 0, w = 16, h = 16 }, rotated = false, trimmed = false,
+                      spriteSourceSize = { x = 0, y = 0, w = 16, h = 16 }, sourceSize = { w = 16, h = 16 }, duration = 100 },
+                },
+                meta = {
+                    size = { w = 32, h = 16 },
+                    frameTags = { { name = 'go', from = 0, to = 1, direction = 'forward' } },
+                    slices = { { name = 'hit', color = '#ff0000ff', keys = {
+                        { frame = 1, bounds = { x = 10, y = 2, w = 4, h = 4 } } } } },
+                },
+            }
+            local ase = desAnim8.newFromAseprite(export, artImage, 'go')
+            ase:gotoFrame(2)
+            for _, flip in ipairs({ false, true }) do
+                ase:setFlipH(flip)
+                render(function() ase:draw(50, 40, 0, 3, 2, 2, 1) end)
+                local bx0, by0, bx1, by1 = bbox()
+                local wx, wy, ww, wh = ase:getWorldRect('hit', 50, 40, 3, 2, 2, 1)
+                check('aseprite slice world rect matches the drawn pixels (flipH ' .. tostring(flip) .. ')',
+                    wx == bx0 and wy == by0 and wx + ww == bx1 and wy + wh == by1,
+                    tostring(wx) .. ',' .. tostring(wy) .. ',' .. tostring(ww) .. ',' .. tostring(wh)
+                        .. ' vs ' .. bx0 .. ',' .. by0 .. ',' .. bx1 .. ',' .. by1)
+            end
+        end
+
         local slices = desAnim8.sliceByAlpha(sheet)
         check('sliceByAlpha on real ImageData', #slices == 2 and slices[2].x == 20, tostring(#slices))
     end)

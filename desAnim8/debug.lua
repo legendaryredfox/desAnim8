@@ -6,8 +6,6 @@ local dbg = {
 }
 
 -- Segment bar of the whole sequence with a playhead, for debugging timing.
----@param anim desAnim8.Animation
----@return nil
 function dbg.drawTimeline(anim, x, y, w, h)
     local gfx = love.graphics
     local pr, pg, pb, pa = gfx.getColor()
@@ -29,8 +27,6 @@ end
 
 -- If the point (mx, my) is inside the timeline rectangle, pauses the animation
 -- on the matching phase and returns true.
----@param anim desAnim8.Animation
----@return boolean
 function dbg.scrub(anim, mx, my, x, y, w, h)
     if mx < x or mx > x + w or my < y or my > y + h then return false end
     anim:setPhase((mx - x) / w)

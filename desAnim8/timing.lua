@@ -269,8 +269,6 @@ end
 -- Global multiplier applied to every animation's update (slow motion, pause menus).
 local clock = { scale = 1 }
 
----@param scale number >= 0
----@return nil
 local function setTimeScale(scale)
     if type(scale) ~= 'number' or not (scale >= 0) or scale == math.huge then
         error(('time scale must be a finite number >= 0, got %s'):format(tostring(scale)), 2)
@@ -278,7 +276,6 @@ local function setTimeScale(scale)
     clock.scale = scale
 end
 
----@return number
 local function getTimeScale()
     return clock.scale
 end

@@ -5,14 +5,11 @@ local timing = require(PKG .. '.timing')
 local neighbourPosition, frameProgress = timing.neighbourPosition, timing.frameProgress
 local EASINGS, resolveEasing = timing.EASINGS, timing.resolveEasing
 
----@class desAnim8.Animation
 local Animation = {}
 
 local IDENTITY_TRANSFORM = { x = 0, y = 0, r = 0, sx = 1, sy = 1 }
 local HALF_PI = math.pi / 2
 
----@return number
----@nodiscard
 function Animation:getFrameProgress()
     return frameProgress(self)
 end
@@ -31,9 +28,6 @@ end
 
 -- Blends keyframe `transform` data (see the data option) between frames instead
 -- of stepping. `easing` shapes the blend; default linear.
----@param enabled boolean
----@param easing desAnim8.Easing?
----@return desAnim8.Animation
 function Animation:setInterpolation(enabled, easing)
     if type(enabled) ~= 'boolean' then error('setInterpolation: expected a boolean', 2) end
     self._interp = enabled or nil
@@ -48,16 +42,6 @@ end
 -- A flip mirrors the sprite inside its (untrimmed) source frame of size W x H,
 -- so the drawn position stays put. With a trim offset (tx, ty) the quad is only
 -- part of that frame: the origin becomes ox - tx, or W - tx - ox once mirrored.
----@return love.Quad quad
----@return number? x
----@return number? y
----@return number? r
----@return number? sx
----@return number? sy
----@return number? ox
----@return number? oy
----@return number? kx
----@return number? ky
 function Animation:getFrameInfo(x, y, r, sx, sy, ox, oy, kx, ky)
     local fh, fv = self.flippedH, self.flippedV
     -- _fancy: some feature beyond a plain frame is configured (trim, transforms,
@@ -170,9 +154,6 @@ end
 
 -- Value stored under `name` for a frame (default: the current one) through the
 -- `data` constructor option, or nil. Shared with clones; treat it as read only.
----@param name string
----@param frame integer?
----@return any
 function Animation:getFrameData(name, frame)
     local d = self._data and self._data[frame or self.currentFrame]
     return d and d[name]
@@ -180,8 +161,6 @@ end
 
 -- When on, ox and oy default to the frame's `pivot` data ({ x, y } in source
 -- frame pixels) wherever the caller leaves them out.
----@param enabled boolean
----@return desAnim8.Animation
 function Animation:setAutoPivot(enabled)
     if type(enabled) ~= 'boolean' then error('setAutoPivot: expected a boolean', 2) end
     self._autoPivot = enabled
@@ -192,11 +171,6 @@ end
 -- World-space rectangle of a { x, y, w, h } stored under `name` (for example a
 -- hitbox), given the same x, y, sx, sy, ox, oy you draw with. Honours the
 -- current flips; rotation is not supported. Returns x, y, w, h or nil.
----@param name string
----@return number? x
----@return number? y
----@return number? w
----@return number? h
 function Animation:getWorldRect(name, x, y, sx, sy, ox, oy)
     local f = self.currentFrame
     local rect = self:getFrameData(name, f)
@@ -229,17 +203,11 @@ function Animation:getWorldRect(name, x, y, sx, sy, ox, oy)
 end
 
 -- Adds the current frame (flip applied) to a SpriteBatch and returns its id.
----@param batch love.SpriteBatch
----@param ... number x, y, r, sx, sy, ox, oy, kx, ky
----@return integer id
 function Animation:addToBatch(batch, ...)
     return batch:add(self:getFrameInfo(...))
 end
 
 -- Rewrites sprite `id` of a SpriteBatch with the current frame.
----@param batch love.SpriteBatch
----@param id integer
----@param ... number x, y, r, sx, sy, ox, oy, kx, ky
 function Animation:setInBatch(batch, id, ...)
     return batch:set(id, self:getFrameInfo(...))
 end

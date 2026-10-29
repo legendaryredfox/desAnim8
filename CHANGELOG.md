@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.10.0 (unreleased)
+## 0.10.0
 
 ### Added
 - Queries: `getCurrentFrameNumber`, `getRemainingTime`, `getPhase`/`setPhase`, `getLoopCount`, `isFinished`, `getFrameProgress`.
@@ -22,7 +22,7 @@
 - `getState`/`setState` for saving and restoring playback.
 - `examples/aseprite`: the Aseprite importer end to end, with a minimal JSON decoder and an export that includes tags and slices.
 - `docs/showcase.gif` in the README, recorded from the example by `tools/record-gif.sh` (the example has a scripted recording mode).
-- LuaCATS annotations, a rockspec, `.luacheckrc`, `examples/showcase`, `tests/bench.lua`, and the README in Brazilian Portuguese and English.
+- LuaCATS type definitions in `types/desAnim8.lua` (with a `.luarc.json`), a rockspec, `.luacheckrc`, `examples/showcase`, `tests/bench.lua`, and the README in Brazilian Portuguese and English.
 
 ### Fixed
 - `setPlayMode` and `setDurations` left `currentFrame` out of step with the timer while an easing or `setStep` was active, so the frame jumped on the next `update`. `gotoFrame` also honours `setStep` now.

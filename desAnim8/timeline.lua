@@ -11,7 +11,6 @@ local applyRegion, locate, resolveEasing = timing.applyRegion, timing.locate, ti
 local displayTime, timerFor, timerForDisplay = timing.displayTime, timing.timerFor, timing.timerForDisplay
 local assertTickDurations = options.assertTickDurations
 
----@class desAnim8.Animation
 local Animation = {}
 
 local function assertSpeedValue(self, v, what)
@@ -24,8 +23,6 @@ local function assertSpeedValue(self, v, what)
 end
 
 -- Playback rate: 1 is normal, 2 doubles it, negative plays backwards, 0 holds.
----@param rate number negative plays backwards
----@return desAnim8.Animation
 function Animation:setSpeed(rate)
     assertSpeedValue(self, rate, 'setSpeed: speed')
     self._speed = rate
@@ -33,14 +30,11 @@ function Animation:setSpeed(rate)
     return self
 end
 
----@return number
 function Animation:getSpeed()
     return self._speed
 end
 
 -- Sets the speed so one play-through lasts `seconds`; the direction is kept.
----@param seconds number
----@return desAnim8.Animation
 function Animation:fitDuration(seconds)
     if self._ticks then error('fitDuration: not available in ticks mode', 2) end
     if type(seconds) ~= 'number' or not (seconds > 0) or seconds == math.huge then
@@ -53,8 +47,6 @@ end
 
 -- Ignores updates for `seconds` of dt (hit-stop). Leftover dt in the same call
 -- advances normally.
----@param seconds number
----@return desAnim8.Animation
 function Animation:freeze(seconds)
     if type(seconds) ~= 'number' or not (seconds >= 0) or seconds == math.huge then
         error(('freeze: seconds must be a non-negative number, got %s'):format(tostring(seconds)), 2)
@@ -69,8 +61,6 @@ end
 
 -- Quantizes the displayed time to multiples of `seconds` (animating "on twos").
 -- nil turns it off.
----@param seconds number?
----@return desAnim8.Animation
 function Animation:setStep(seconds)
     if seconds ~= nil and (type(seconds) ~= 'number' or not (seconds > 0) or seconds == math.huge) then
         error(('setStep: step must be a positive number or nil, got %s'):format(tostring(seconds)), 2)
@@ -83,8 +73,6 @@ end
 
 -- Remaps time across the sequence. `easing` is a name from EASINGS, a function
 -- from [0,1] to [0,1] that never decreases, or nil for linear.
----@param easing desAnim8.Easing?
----@return desAnim8.Animation
 function Animation:setEasing(easing)
     self._ease = resolveEasing(easing, 'setEasing', 3)
     self._plain = nil
@@ -93,8 +81,6 @@ function Animation:setEasing(easing)
 end
 
 -- Jumps to a random point of the play-through, to keep crowds out of sync.
----@param rng (fun(): number)?
----@return nil
 function Animation:randomizeStart(rng)
     local v = (rng or math.random)()
     if type(v) ~= 'number' or not (v >= 0 and v <= 1) then
@@ -104,8 +90,6 @@ function Animation:randomizeStart(rng)
 end
 
 -- Switches the play mode, keeping the current frame where the new sequence has it.
----@param mode desAnim8.PlayMode
----@return desAnim8.Animation
 function Animation:setPlayMode(mode)
     if not VALID_MODES[mode] then
         error(('setPlayMode: unknown play mode %s; expected %s'):format(
@@ -130,8 +114,6 @@ end
 
 -- Replaces the durations (same formats as the constructor) keeping the position
 -- and how far into the current frame playback is.
----@param durations desAnim8.Durations
----@return desAnim8.Animation
 function Animation:setDurations(durations)
     local fresh = parseDurations(durations, #self.frames, 3)
     if self._ticks then assertTickDurations(fresh, 3) end
@@ -151,9 +133,6 @@ end
 
 -- Loop frames from..to (loop mode only): playback runs 1..to once, then keeps
 -- wrapping back to `from`. release() lets it run on to the end and finish.
----@param from integer
----@param to integer
----@return desAnim8.Animation
 function Animation:setLoopRange(from, to)
     if self.playMode ~= 'loop' then error('setLoopRange: only available in loop mode', 2) end
     local n = #self.frames
@@ -165,14 +144,12 @@ function Animation:setLoopRange(from, to)
     return self
 end
 
----@return desAnim8.Animation
 function Animation:clearLoopRange()
     self._loopFrom, self._loopTo, self._released = nil, nil, false
     applyRegion(self)
     return self
 end
 
----@return desAnim8.Animation
 function Animation:release()
     if not self._loopFrom then error('release: no loop range set (see setLoopRange)', 2) end
     self._released = true
@@ -183,7 +160,6 @@ end
 -- Inside a coroutine: yields until the animation finishes (once modes) or
 -- completes its next loop. Polls once per resume, so it works with any scheduler
 -- that resumes the coroutine every frame.
----@return nil
 function Animation:wait()
     local co, isMain = coroutine.running()
     if co == nil or isMain then error('wait: must be called inside a coroutine', 2) end
